@@ -8,7 +8,11 @@ export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET ?? "build-time-placeholder-secret-change-me",
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
   emailAndPassword: { enabled: true, disableSignUp: true },
-  session: { cookieCache: { enabled: true, maxAge: 5 * 60 } },
+  session: {
+    cookieCache: { enabled: true, maxAge: 5 * 60 },
+    expiresIn: 60 * 60 * 24 * 30, // 30 天
+    updateAge: 60 * 60 * 24, // 每 1 天滑动续期
+  },
   user: { modelName: "users" },
   advanced: { defaultCookieAttributes: { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" } },
 });

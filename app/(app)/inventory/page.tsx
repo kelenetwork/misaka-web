@@ -4,6 +4,7 @@ import { db } from "@/lib/db/client";
 import { inventorySnapshots, orders, regions, tasks } from "@/lib/db/schema";
 import { and, count, eq, gte, lt } from "drizzle-orm";
 import { fmtRelative } from "@/lib/util/format";
+import Link from "next/link";
 import { Bell } from "lucide-react";
 import { getCurrentUser } from "@/lib/session";
 import { redirect } from "next/navigation";
@@ -120,9 +121,9 @@ export default async function InventoryPage() {
           <>
             <StatusPill text={stats.lastUpdate ? `实时 · ${fmtRelative(stats.lastUpdate)}` : "等待首次轮询..."} />
             <RefreshButton />
-            <button className="w-8 h-8 grid place-items-center border border-[var(--border)] rounded-md text-[var(--text-dim)] hover:text-[var(--misaka)] hover:border-[var(--misaka)] transition-colors" title="通知">
+            <Link href="/activity" className="w-8 h-8 grid place-items-center border border-[var(--border)] rounded-md text-[var(--text-dim)] hover:text-[var(--misaka)] hover:border-[var(--misaka)] transition-colors" title="实时活动">
               <Bell className="w-4 h-4" />
-            </button>
+            </Link>
           </>
         }
       />

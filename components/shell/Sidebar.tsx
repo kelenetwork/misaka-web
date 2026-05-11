@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutGrid, Activity, Settings, CheckSquare,
-  Users, Send, ShieldCheck, Globe
+  Users, Send, ShieldCheck, Globe, Gauge
 } from "lucide-react";
 
 type Item = { href: string; label: string; icon: React.ComponentType<{ className?: string }>; count?: number | string };
@@ -37,6 +37,7 @@ const SECTIONS: NavSection[] = [
 const ADMIN_SECTION: NavSection = {
   label: "管理",
   items: [
+    { href: "/admin", label: "Dashboard", icon: Gauge },
     { href: "/admin/applications", label: "申请审批", icon: ShieldCheck },
     { href: "/admin/users", label: "用户 / 系统", icon: Globe },
   ],
@@ -62,7 +63,7 @@ export function Sidebar({ user }: { user: User }) {
               {section.label}
             </div>
             {section.items.map((it) => {
-              const active = pathname === it.href || pathname.startsWith(it.href + "/");
+              const active = it.href === "/admin" ? pathname === "/admin" : (pathname === it.href || pathname.startsWith(it.href + "/"));
               const Icon = it.icon;
               return (
                 <Link

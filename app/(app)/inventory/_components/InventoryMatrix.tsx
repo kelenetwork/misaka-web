@@ -240,6 +240,37 @@ export function InventoryMatrix({
     return () => window.clearTimeout(timeout);
   }, [keyword]);
 
+  useEffect(() => {
+    const source = new EventSource("/api/inventory/stream");
+    let lastRefreshAt = 0;
+    let refreshTimer: number | null = null;
+
+    const refresh = () => {
+      const now = Date.now();
+      const elapsed = now - lastRefreshAt;
+      if (elapsed >= 1_500) {
+        lastRefreshAt = now;
+        router.refresh();
+        return;
+      }
+      if (refreshTimer !== null) return;
+      refreshTimer = window.setTimeout(() => {
+        refreshTimer = null;
+        lastRefreshAt = Date.now();
+        router.refresh();
+      }, 1_500 - elapsed);
+    };
+
+    source.addEventListener("change", refresh);
+    source.addEventListener("available", refresh);
+    source.onerror = (event) => console.warn("[inventory] SSE connection error", event);
+
+    return () => {
+      if (refreshTimer !== null) window.clearTimeout(refreshTimer);
+      source.close();
+    };
+  }, [router]);
+
   const popularIdSet = useMemo(() => new Set(popularIds), [popularIds]);
   const normalizedKeyword = keyword.trim().toLowerCase();
 

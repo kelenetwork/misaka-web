@@ -1,7 +1,7 @@
 services:
   misaka-web:
     image: kelework/misaka-web:latest
-    build: .
+    container_name: misaka-web
     restart: unless-stopped
     env_file: .env
     volumes:

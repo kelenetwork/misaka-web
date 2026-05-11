@@ -9,6 +9,7 @@ import { db } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { TelegramBindClient } from "@/components/telegram/TelegramBindClient";
+import { getBotInfo } from "@/lib/telegram/info";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,9 @@ export default async function TelegramPage() {
 
   const row = await db.query.users.findFirst({ where: eq(users.id, user.id) });
   const telegramUserId = row?.telegramUserId;
+  const bot = await getBotInfo();
+  const botUsername = bot?.username ?? "misaka_web_bot";
+  const botFirstName = bot?.firstName ?? "misaka-web";
 
   return (
     <AppShell user={user}>
@@ -40,8 +44,8 @@ export default async function TelegramPage() {
             </div>
             <div className="text-[10px] tracking-[0.16em] uppercase text-[var(--text-faint)]">Bot</div>
             <div className="font-mono text-[12px] text-[var(--text-dim)]">
-              <a href="https://t.me/misakabuhuo_bot" target="_blank" rel="noopener" className="text-[var(--misaka)] hover:underline">@misakabuhuo_bot</a>{" "}
-              <span className="text-[var(--text-faint)] ml-2">Misaka 库存补货通知</span>
+              <a href={`https://t.me/${botUsername}`} target="_blank" rel="noopener" className="text-[var(--misaka)] hover:underline">@{botUsername}</a>{" "}
+              <span className="text-[var(--text-faint)] ml-2">{botFirstName}</span>
             </div>
           </div>
         </Card>
@@ -53,7 +57,7 @@ export default async function TelegramPage() {
               <span className="font-serif-italic text-[24px] leading-none text-[var(--misaka)]">1</span>
               <div>
                 <div className="font-medium mb-1">点开 Telegram bot</div>
-                <div className="text-[var(--text-dim)] text-[12px]">访问 <a href="https://t.me/misakabuhuo_bot" target="_blank" rel="noopener" className="text-[var(--misaka)] hover:underline">@misakabuhuo_bot</a> 开始对话。</div>
+                <div className="text-[var(--text-dim)] text-[12px]">访问 <a href={`https://t.me/${botUsername}`} target="_blank" rel="noopener" className="text-[var(--misaka)] hover:underline">@{botUsername}</a> 开始对话。</div>
               </div>
             </li>
             <li className="grid grid-cols-[28px_1fr] gap-3">

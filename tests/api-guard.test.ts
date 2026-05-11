@@ -67,6 +67,9 @@ beforeEach(async () => {
       enabled integer NOT NULL DEFAULT 1,
       current_count integer NOT NULL DEFAULT 0,
       stop_after_target integer NOT NULL DEFAULT 1,
+      failure_count integer NOT NULL DEFAULT 0,
+      last_failure_at integer,
+      next_retry_at integer,
       created_at integer NOT NULL DEFAULT (unixepoch()),
       updated_at integer NOT NULL DEFAULT (unixepoch())
     );

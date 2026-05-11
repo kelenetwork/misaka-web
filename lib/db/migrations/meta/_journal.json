@@ -15,6 +15,13 @@
       "when": 1778531682635,
       "tag": "0001_fluffy_lily_hollister",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1778537159226,
+      "tag": "0002_high_gladiator",
+      "breakpoints": true
     }
   ]
 }

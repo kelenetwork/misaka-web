@@ -65,6 +65,9 @@ export const tasks = sqliteTable("tasks", {
   enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
   currentCount: integer("current_count").notNull().default(0),
   stopAfterTarget: integer("stop_after_target", { mode: "boolean" }).notNull().default(true),
+  failureCount: integer("failure_count").notNull().default(0),
+  lastFailureAt: integer("last_failure_at", { mode: "timestamp" }),
+  nextRetryAt: integer("next_retry_at", { mode: "timestamp" }),
   ...timestamps,
 });
 

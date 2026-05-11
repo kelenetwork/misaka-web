@@ -18,6 +18,6 @@ async function sendUserMessage(userId: string, text: string) {
   const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
   if (user?.telegramUserId && bot) await bot.api.sendMessage(user.telegramUserId, text);
 }
-export async function notifyOrderSuccess(userId: string, name: string, planSlug: string, orderId: number, stripeLink: string, region: string) { await sendUserMessage(userId, `✅ 下单成功 任务=${name} 区域=${region} 机型=${planSlug} 订单=#${orderId} 付款链接：${stripeLink}`); }
+export async function notifyOrderSuccess(userId: string, name: string, planSlug: string, orderId: number, invoiceId: number, invoiceUrl: string, region: string) { await sendUserMessage(userId, `✅ 下单成功 任务=${name} 区域=${region} 机型=${planSlug} 订单=#${orderId} 发票=#${invoiceId} 付款链接：${invoiceUrl}`); }
 export async function notifyOrderFailed(userId: string, name: string, error: string) { await sendUserMessage(userId, `❌ 下单失败 任务=${name} 错误=${error}`); }
 export async function notifyAccountCircuitBreaker(userId: string, label: string) { await sendUserMessage(userId, `⚠️ 账号 ${label} 已熔断 30 分钟`); }

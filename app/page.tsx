@@ -1,1 +1,5 @@
-export default function HomePage() { return <div>TODO: home page by 修一</div>; }
+import { redirect } from "next/navigation";
+
+export default function RootPage() {
+  redirect("/inventory");
+}

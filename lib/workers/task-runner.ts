@@ -7,7 +7,7 @@ import { logAudit } from "@/lib/audit";
 import { notifyOrderFailed, notifyOrderSuccess } from "@/lib/telegram/bot";
 
 export async function runMatchingTasks(plan: InventoryPlan) {
-  const matches = await db.query.tasks.findMany({ where: and(eq(tasks.enabled, true), eq(tasks.region, plan.region), eq(tasks.planId, plan.planId), gte(tasks.maxPrice, plan.price)) });
+  const matches = await db.query.tasks.findMany({ where: and(eq(tasks.enabled, true), eq(tasks.region, plan.region), eq(tasks.planId, plan.planId), gte(tasks.maxPrice, plan.priceMonthly)) });
   for (const task of matches) await runTask(task.id, plan);
 }
 
@@ -22,7 +22,7 @@ export async function runTask(taskId: string, plan: InventoryPlan) {
     sqlite.transaction(() => {
       const fresh = db.select().from(tasks).where(eq(tasks.id, taskId)).get();
       if (!fresh || fresh.currentCount >= fresh.targetCount) return;
-      db.insert(orders).values({ taskId: task.id, userId: task.userId, accountId: task.accountId, region: task.region, planId: task.planId, planSlug: plan.planSlug, regionName: plan.region, price: plan.price, misakaOrderId: result.order_id, invoiceId: result.invoice_id, stripeLink: result.stripe_url, status: "created" }).run();
+      db.insert(orders).values({ taskId: task.id, userId: task.userId, accountId: task.accountId, region: task.region, planId: task.planId, planSlug: plan.planSlug, regionName: plan.region, price: plan.priceMonthly, misakaOrderId: result.order_id, invoiceId: result.invoice_id, stripeLink: result.stripe_url, status: "created" }).run();
       const nextCount = fresh.currentCount + 1;
       db.update(tasks).set({ currentCount: nextCount, enabled: fresh.stopAfterTarget && nextCount >= fresh.targetCount ? false : fresh.enabled, updatedAt: new Date() }).where(eq(tasks.id, taskId)).run();
     })();
@@ -30,7 +30,7 @@ export async function runTask(taskId: string, plan: InventoryPlan) {
     await notifyOrderSuccess(task.userId, task.name, plan.planSlug, result.order_id, result.stripe_url, task.region);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    await db.insert(orders).values({ taskId: task.id, userId: task.userId, accountId: task.accountId, region: task.region, planId: task.planId, planSlug: plan.planSlug, regionName: plan.region, price: plan.price, status: "failed", errorMessage: message });
+    await db.insert(orders).values({ taskId: task.id, userId: task.userId, accountId: task.accountId, region: task.region, planId: task.planId, planSlug: plan.planSlug, regionName: plan.region, price: plan.priceMonthly, status: "failed", errorMessage: message });
     await logAudit(task.userId, "order.failed", task.id, { error: message }, null);
     await notifyOrderFailed(task.userId, task.name, message);
   }

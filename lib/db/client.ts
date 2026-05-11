@@ -18,7 +18,7 @@ export type Db = typeof db;
 
 // Auto-apply pending migrations on startup (idempotent, safe for repeated boots).
 // Skip in test env where migrations are managed per-test.
-if (process.env.NODE_ENV !== "test" && !process.env.SKIP_AUTO_MIGRATE) {
+if (process.env.NODE_ENV === "production" && !process.env.SKIP_AUTO_MIGRATE && !process.env.NEXT_PHASE) {
   try {
     const migrationsFolder = process.env.MIGRATIONS_DIR
       ?? path.join(path.dirname(fileURLToPath(import.meta.url)), "migrations");

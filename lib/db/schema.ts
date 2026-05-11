@@ -82,16 +82,48 @@ export const orders = sqliteTable("orders", {
   paidAt: integer("paid_at", { mode: "timestamp" }),
 });
 
+export const regions = sqliteTable("regions", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull(),
+  facility: text("facility"),
+  countryCode: text("country_code").notNull(),
+  country: text("country").notNull(),
+  continent: text("continent"),
+  type: text("type"),
+  lat: real("lat"),
+  lng: real("lng"),
+  tags: text("tags", { mode: "json" }).$type<string[]>(),
+  available: integer("available", { mode: "boolean" }).notNull().default(true),
+  unavailableReason: text("unavailable_reason"),
+  certificates: text("certificates", { mode: "json" }).$type<string[]>(),
+  speedtests: text("speedtests", { mode: "json" }).$type<Array<{url: string; label: string}>>(),
+  description: text("description"),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
 export const inventorySnapshots = sqliteTable("inventory_snapshots", {
   region: text("region").notNull(),
   planId: integer("plan_id").notNull(),
   available: integer("available", { mode: "boolean" }).notNull(),
   planSlug: text("plan_slug").notNull(),
   planName: text("plan_name").notNull(),
-  price: real("price").notNull(),
-  cpu: integer("cpu").notNull(),
-  ram: integer("ram").notNull(),
-  disk: text("disk", { mode: "json" }).notNull().$type<Record<string, unknown>>(),
+  // Pricing (USD)
+  priceMonthly: real("price_monthly").notNull(),
+  priceSemiannual: real("price_semiannual"),
+  priceAnnual: real("price_annual"),
+  // Specs
+  vcores: integer("vcores").notNull(),
+  memoryMb: integer("memory_mb").notNull(),
+  diskMb: integer("disk_mb").notNull(),
+  transferMb: integer("transfer_mb").notNull(),
+  // Network
+  networkBillingModel: text("network_billing_model"),
+  routingProfile: text("routing_profile"),
+  nvme: integer("nvme", { mode: "boolean" }).notNull().default(false),
+  // Meta
+  tags: text("tags", { mode: "json" }).$type<string[]>(),
+  unavailableReason: text("unavailable_reason"),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 }, (table) => ({ pk: primaryKey({ columns: [table.region, table.planId] }) }));
 

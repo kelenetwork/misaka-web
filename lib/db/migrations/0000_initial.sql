@@ -46,10 +46,18 @@ CREATE TABLE `inventory_snapshots` (
 	`available` integer NOT NULL,
 	`plan_slug` text NOT NULL,
 	`plan_name` text NOT NULL,
-	`price` real NOT NULL,
-	`cpu` integer NOT NULL,
-	`ram` integer NOT NULL,
-	`disk` text NOT NULL,
+	`price_monthly` real NOT NULL,
+	`price_semiannual` real,
+	`price_annual` real,
+	`vcores` integer NOT NULL,
+	`memory_mb` integer NOT NULL,
+	`disk_mb` integer NOT NULL,
+	`transfer_mb` integer NOT NULL,
+	`network_billing_model` text,
+	`routing_profile` text,
+	`nvme` integer DEFAULT false NOT NULL,
+	`tags` text,
+	`unavailable_reason` text,
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
 	PRIMARY KEY(`region`, `plan_id`)
 );
@@ -96,6 +104,26 @@ CREATE TABLE `rate_limits` (
 	`key` text PRIMARY KEY NOT NULL,
 	`count` integer NOT NULL,
 	`expires_at` integer NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE `regions` (
+	`id` text PRIMARY KEY NOT NULL,
+	`name` text NOT NULL,
+	`slug` text NOT NULL,
+	`facility` text,
+	`country_code` text NOT NULL,
+	`country` text NOT NULL,
+	`continent` text,
+	`type` text,
+	`lat` real,
+	`lng` real,
+	`tags` text,
+	`available` integer DEFAULT true NOT NULL,
+	`unavailable_reason` text,
+	`certificates` text,
+	`speedtests` text,
+	`description` text,
+	`updated_at` integer DEFAULT (unixepoch()) NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE `session` (

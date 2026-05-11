@@ -47,7 +47,7 @@ export default function ApplyPage() {
           <div className="text-[10px] tracking-[0.2em] uppercase text-[var(--misaka)] mb-2">/ submitted</div>
           <h2 className="font-serif-italic text-[34px] leading-none mb-3">申请已提交</h2>
           <p className="text-[var(--text-dim)] text-[13px] font-sans leading-[1.7]">
-            管理员收到你的申请后会审核。通过后你会收到一封含临时密码的邮件（如果邮箱有效），首次登录请尽快修改密码。
+            管理员审核通过后，会通过私聊或邮件发给你一个激活链接，点击链接自行设置密码即可登录。
           </p>
         </div>
 

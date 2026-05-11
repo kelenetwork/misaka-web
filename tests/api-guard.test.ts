@@ -9,7 +9,7 @@ const sessionState = vi.hoisted(() => ({ current: null as null | { user: { id: s
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: vi.fn(async () => sessionState.current) } } }));
 
 const { sqlite, db } = await import("@/lib/db/client");
-const { users, misakaAccounts, tasks } = await import("@/lib/db/schema");
+const { users, misakaAccounts, orders, tasks } = await import("@/lib/db/schema");
 const tasksRoute = await import("../app/api/tasks/route");
 const taskRoute = await import("../app/api/tasks/[id]/route");
 const adminUsersRoute = await import("../app/api/admin/users/route");
@@ -21,6 +21,7 @@ function request(path: string) {
 beforeEach(async () => {
   sessionState.current = null;
   sqlite.exec(`
+    DROP TABLE IF EXISTS orders;
     DROP TABLE IF EXISTS tasks;
     DROP TABLE IF EXISTS misaka_accounts;
     DROP TABLE IF EXISTS users;
@@ -67,8 +68,29 @@ beforeEach(async () => {
       enabled integer NOT NULL DEFAULT 1,
       current_count integer NOT NULL DEFAULT 0,
       stop_after_target integer NOT NULL DEFAULT 1,
+      failure_count integer NOT NULL DEFAULT 0,
+      last_failure_at integer,
+      next_retry_at integer,
       created_at integer NOT NULL DEFAULT (unixepoch()),
       updated_at integer NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE TABLE orders (
+      id text PRIMARY KEY,
+      task_id text REFERENCES tasks(id) ON DELETE SET NULL,
+      user_id text NOT NULL REFERENCES users(id),
+      account_id text NOT NULL REFERENCES misaka_accounts(id),
+      region text NOT NULL,
+      plan_id integer NOT NULL,
+      plan_slug text NOT NULL,
+      region_name text NOT NULL,
+      price real NOT NULL,
+      misaka_order_id integer UNIQUE,
+      invoice_id integer,
+      stripe_link text,
+      status text NOT NULL DEFAULT 'pending',
+      error_message text,
+      created_at integer NOT NULL DEFAULT (unixepoch()),
+      paid_at integer
     );
   `);
   await db.insert(users).values([
@@ -81,6 +103,7 @@ beforeEach(async () => {
     { id: "account-other", userId: "other", label: "other", email: "other@misaka.test", passwordEncrypted: "encrypted" },
   ]);
   await db.insert(tasks).values({ id: "task-owner", userId: "owner", accountId: "account-owner", name: "task", region: "HKG12", planId: 574, maxPrice: 9, targetCount: 1 });
+
 });
 
 describe("API auth guards", () => {
@@ -112,5 +135,16 @@ describe("API auth guards", () => {
     sessionState.current = { user: { id: "admin", role: "admin" } };
     const response = await adminUsersRoute.GET(request("/api/admin/users"));
     expect(response.status).toBe(200);
+  });
+
+  it("deletes a task and its order history for the owner", async () => {
+    sessionState.current = { user: { id: "owner", role: "user" } };
+    await db.insert(orders).values({ id: "order-1", taskId: "task-owner", userId: "owner", accountId: "account-owner", region: "HKG12", planId: 574, planSlug: "starter", regionName: "Hong Kong", price: 9, status: "created" });
+
+    const response = await taskRoute.DELETE(request("/api/tasks/task-owner"), { params: Promise.resolve({ id: "task-owner" }) });
+
+    expect(response.status).toBe(200);
+    expect(await db.select().from(tasks)).toHaveLength(0);
+    expect(await db.select().from(orders)).toHaveLength(0);
   });
 });

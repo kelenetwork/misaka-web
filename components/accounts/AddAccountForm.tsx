@@ -11,10 +11,11 @@ export function AddAccountForm() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true); setError(null);
+    setBusy(true); setError(null); setSuccess(null);
     const res = await fetch("/api/accounts", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -26,9 +27,11 @@ export function AddAccountForm() {
       setBusy(false);
       return;
     }
+    setSuccess(`已添加账号「${label}」`);
     setLabel(""); setEmail(""); setPassword("");
     setBusy(false);
     router.refresh();
+    setTimeout(() => setSuccess(null), 3500);
   }
 
   return (
@@ -51,6 +54,12 @@ export function AddAccountForm() {
         </label>
         <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="font-mono" />
       </div>
+      {success && (
+        <div className="flex items-start gap-2 px-2.5 py-2 bg-[var(--misaka-dim)]/40 border border-[var(--misaka)] text-[var(--misaka)] rounded-md text-[11px]">
+          <span className="text-[14px] leading-none">✅</span>
+          <span>{success}</span>
+        </div>
+      )}
       {error && (
         <div className="flex items-start gap-2 px-2.5 py-2 bg-[var(--danger-dim)] border border-[var(--danger)] text-[var(--danger)] rounded-md text-[11px]">
           <AlertCircle className="w-3.5 h-3.5 mt-px shrink-0" />

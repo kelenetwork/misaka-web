@@ -7,11 +7,12 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { getCurrentUser } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db/client";
-import { auditLogs, users, orders } from "@/lib/db/schema";
-import { desc, eq, inArray, gte } from "drizzle-orm";
+import { auditLogs, users } from "@/lib/db/schema";
+import { and, count, desc, eq, gte, inArray, or, SQL } from "drizzle-orm";
 import { fmtRelative, fmtPrice, flagOf } from "@/lib/util/format";
-import { Activity, ExternalLink } from "lucide-react";
+import { Activity } from "lucide-react";
 import Link from "next/link";
+import { ActivityFilters } from "@/components/activity/ActivityFilters";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -37,7 +38,15 @@ const ACTION_LABELS: Record<string, ActionMeta> = {
   "account.recovered": { label: "恢复", tone: "ok" },
   "user.created": { label: "创建用户", tone: "info" },
   "user.banned": { label: "封禁", tone: "err" },
+  "task.auto_paused": { label: "任务暂停", tone: "warn" },
 };
+
+const PAGE_SIZE = 50;
+const ACTION_FILTERS = ["all", "inventory.available", "order.created", "order.failed", "task.auto_paused"] as const;
+const SINCE_FILTERS = ["24h", "7d", "all"] as const;
+
+type ActionFilter = typeof ACTION_FILTERS[number];
+type SinceFilter = typeof SINCE_FILTERS[number];
 
 function actionMeta(action: string): ActionMeta {
   return ACTION_LABELS[action] ?? { label: action.replace(".", " · "), tone: "muted" };
@@ -71,40 +80,73 @@ function detailString(action: string, details: Record<string, unknown> | null): 
   try { return JSON.stringify(details).slice(0, 200); } catch { return ""; }
 }
 
-export default async function ActivityPage() {
+function validAction(value: string | string[] | undefined): ActionFilter {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return ACTION_FILTERS.includes(raw as ActionFilter) ? raw as ActionFilter : "all";
+}
+
+function validSince(value: string | string[] | undefined): SinceFilter {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return SINCE_FILTERS.includes(raw as SinceFilter) ? raw as SinceFilter : "24h";
+}
+
+function validPage(value: string | string[] | undefined) {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const page = Number(raw ?? "1");
+  return Number.isInteger(page) && page > 0 ? page : 1;
+}
+
+function sinceDate(since: SinceFilter) {
+  if (since === "all") return null;
+  const hours = since === "7d" ? 24 * 7 : 24;
+  return new Date(Date.now() - hours * 60 * 60_000);
+}
+
+function pageHref(page: number, action: ActionFilter, since: SinceFilter) {
+  const params = new URLSearchParams();
+  if (page > 1) params.set("page", String(page));
+  if (action !== "all") params.set("action", action);
+  if (since !== "24h") params.set("since", since);
+  const query = params.toString();
+  return query ? `/activity?${query}` : "/activity";
+}
+
+function paginationWindow(page: number, totalPages: number) {
+  const pages = new Set([1, totalPages, page - 1, page, page + 1]);
+  return Array.from(pages).filter((item) => item >= 1 && item <= totalPages).sort((a, b) => a - b);
+}
+
+export default async function ActivityPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  // Pull last 24h of audit logs (system + own actor)
-  const since = new Date(Date.now() - 24 * 60 * 60_000);
-  const logs = await db
-    .select()
-    .from(auditLogs)
-    .where(gte(auditLogs.createdAt, since))
-    .orderBy(desc(auditLogs.createdAt))
-    .limit(300);
+  const params = await searchParams;
+  const action = validAction(params.action);
+  const since = validSince(params.since);
+  const page = validPage(params.page);
+  const filters: SQL[] = [];
+  const minDate = sinceDate(since);
+  if (minDate) filters.push(gte(auditLogs.createdAt, minDate));
+  if (action !== "all") filters.push(eq(auditLogs.action, action));
+  if (user.role !== "admin") filters.push(or(eq(auditLogs.action, "inventory.available"), eq(auditLogs.actorId, user.id))!);
+  const where = filters.length > 0 ? and(...filters) : undefined;
 
-  // Resolve actor display names
-  const actorIds = Array.from(new Set(logs.map((l) => l.actorId).filter((v): v is string => !!v)));
+  const [{ value: total }] = await db.select({ value: count() }).from(auditLogs).where(where);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const visible = await db.select().from(auditLogs).where(where).orderBy(desc(auditLogs.createdAt)).limit(PAGE_SIZE).offset((currentPage - 1) * PAGE_SIZE);
+
+  const actorIds = Array.from(new Set(visible.map((l) => l.actorId).filter((v): v is string => !!v)));
   const actorRows = actorIds.length > 0 ? await db.select().from(users).where(inArray(users.id, actorIds)) : [];
   const actorMap = new Map(actorRows.map((u) => [u.id, u.username ?? u.name ?? u.email]));
 
-  // For user view, scope to:
-  // - inventory.* + application.submitted/approved (global)
-  // - own actor events (orders, account, telegram, etc.)
-  // Admins see everything.
-  const visible = logs.filter((l) => {
-    if (user.role === "admin") return true;
-    if (l.action.startsWith("inventory.")) return true;
-    if (l.actorId === user.id) return true;
-    return false;
-  });
-
+  const statWhere = user.role === "admin" ? (minDate ? gte(auditLogs.createdAt, minDate) : undefined) : and(minDate ? gte(auditLogs.createdAt, minDate) : undefined, or(eq(auditLogs.action, "inventory.available"), eq(auditLogs.actorId, user.id))!);
+  const statLogs = await db.select({ action: auditLogs.action }).from(auditLogs).where(statWhere);
   const stats = {
-    total: visible.length,
-    inventory: visible.filter((l) => l.action.startsWith("inventory.")).length,
-    orders: visible.filter((l) => l.action.startsWith("order.")).length,
-    incidents: visible.filter((l) => l.action.includes("failed") || l.action.includes("rate_limited") || l.action.includes("rejected")).length,
+    total,
+    inventory: statLogs.filter((l) => l.action.startsWith("inventory.")).length,
+    orders: statLogs.filter((l) => l.action.startsWith("order.")).length,
+    incidents: statLogs.filter((l) => l.action.includes("failed") || l.action.includes("rate_limited") || l.action.includes("rejected") || l.action === "task.auto_paused").length,
   };
 
   const lastUpdate = visible[0]?.createdAt;
@@ -132,7 +174,7 @@ export default async function ActivityPage() {
           ))}
         </div>
 
-        <SectionHead title="时间线" count={`最近 24 小时 · ${visible.length} 条`} />
+        <SectionHead title="时间线" count={`第 ${currentPage} / ${totalPages} 页 · 共 ${total} 条`} actions={<ActivityFilters action={action} since={since} />} />
 
         {visible.length === 0 ? (
           <Card>
@@ -176,6 +218,19 @@ export default async function ActivityPage() {
               );
             })}
           </Card>
+        )}
+
+        {totalPages > 1 && (
+          <div className="flex flex-wrap items-center justify-center gap-2 text-[12px]">
+            <Link href={pageHref(Math.max(1, currentPage - 1), action, since)} className={["px-3 py-2 rounded-md border border-[var(--border)]", currentPage === 1 ? "pointer-events-none opacity-40" : "hover:border-[var(--misaka)]"].join(" ")}>上一页</Link>
+            {paginationWindow(currentPage, totalPages).map((item, index, arr) => (
+              <span key={item} className="flex items-center gap-2">
+                {index > 0 && item - arr[index - 1] > 1 && <span className="text-[var(--text-faint)]">...</span>}
+                <Link href={pageHref(item, action, since)} className={["min-w-9 px-3 py-2 rounded-md border text-center", item === currentPage ? "border-[var(--misaka)] text-[var(--misaka)] bg-[var(--misaka-dim)]" : "border-[var(--border)] hover:border-[var(--misaka)]"].join(" ")}>{item}</Link>
+              </span>
+            ))}
+            <Link href={pageHref(Math.min(totalPages, currentPage + 1), action, since)} className={["px-3 py-2 rounded-md border border-[var(--border)]", currentPage === totalPages ? "pointer-events-none opacity-40" : "hover:border-[var(--misaka)]"].join(" ")}>下一页</Link>
+          </div>
         )}
       </section>
       <Footer />

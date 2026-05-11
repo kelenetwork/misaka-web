@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { AlertCircle, ArrowRight, Save, Trash2, Search, Check } from "lucide-react";
+import { AlertCircle, ArrowRight, Save, Search, Check } from "lucide-react";
 import { flagOf, fmtPrice, fmtMb } from "@/lib/util/format";
 
 type Account = { id: string; label: string; email: string };
@@ -125,14 +125,6 @@ export function TaskForm({
       setError(err instanceof Error ? err.message : "网络错误");
       setBusy(false);
     }
-  }
-
-  async function destroy() {
-    if (!initial?.id || !confirm("确认删除该任务？")) return;
-    setBusy(true);
-    const res = await fetch(`/api/tasks/${initial.id}`, { method: "DELETE" });
-    if (res.ok) { router.push("/tasks"); router.refresh(); }
-    else setBusy(false);
   }
 
   return (
@@ -361,11 +353,6 @@ export function TaskForm({
         <Button type="submit" variant="primary" disabled={busy}>
           {mode === "edit" ? <><Save className="w-3.5 h-3.5" /> 保存修改</> : <><ArrowRight className="w-3.5 h-3.5" /> 创建任务</>}
         </Button>
-        {mode === "edit" && (
-          <Button type="button" variant="danger" disabled={busy} onClick={destroy}>
-            <Trash2 className="w-3.5 h-3.5" /> 删除
-          </Button>
-        )}
         <Button type="button" variant="ghost" disabled={busy} onClick={() => router.push("/tasks")}>取消</Button>
       </div>
     </form>

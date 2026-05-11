@@ -4,6 +4,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { Sidebar } from "./Sidebar";
+import { HealthBanner } from "./HealthBanner";
 
 /**
  * Mobile-aware shell that:
@@ -99,6 +100,7 @@ export function MobileShell({
             <span className="text-[9px] tracking-[0.18em] uppercase text-[var(--misaka)]">/ web</span>
           </div>
         </div>
+        <HealthBanner />
         {children}
       </main>
     </div>

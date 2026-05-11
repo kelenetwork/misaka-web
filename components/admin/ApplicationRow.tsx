@@ -15,14 +15,14 @@ export function ApplicationRow({
   const [busy, setBusy] = useState(false);
   const [rejectMode, setRejectMode] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
-  const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [setupResult, setSetupResult] = useState<{ url: string; expiresInHours: number } | null>(null);
 
   async function approve() {
     setBusy(true);
     const res = await fetch(`/api/admin/applications/${application.id}/approve`, { method: "POST" });
     const data = await res.json().catch(() => ({}));
-    if (res.ok && data.tempPassword) {
-      setTempPassword(data.tempPassword);
+    if (res.ok && data.setupUrl) {
+      setSetupResult({ url: data.setupUrl, expiresInHours: data.expiresInHours ?? 48 });
     } else if (res.ok) {
       router.refresh();
     } else {
@@ -89,17 +89,18 @@ export function ApplicationRow({
         </div>
       )}
 
-      {tempPassword && (
+      {setupResult && (
         <div className="border-t border-[var(--border)] bg-[var(--misaka-dim)]/30 px-4 py-3 grid gap-2">
           <div className="text-[10px] tracking-[0.16em] uppercase text-[var(--misaka)]">已创建账号，临时密码：</div>
-          <div className="flex items-center gap-2">
-            <code className="font-mono text-[13px] bg-[var(--bg)] px-2.5 py-1 rounded border border-[var(--misaka)] flex-1">{tempPassword}</code>
-            <button onClick={() => navigator.clipboard.writeText(tempPassword)} className="px-2.5 py-1 rounded border border-[var(--border)] hover:border-[var(--misaka)] text-[11px] flex items-center gap-1">
+          <div className="text-[10px] tracking-[0.16em] uppercase text-[var(--text-faint)] mb-1">已通过审核 · 把以下链接私密发给申请人</div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <code className="font-mono text-[11px] bg-[var(--bg)] px-2.5 py-1.5 rounded border border-[var(--misaka)] flex-1 min-w-0 break-all">{setupResult.url}</code>
+            <button onClick={() => navigator.clipboard.writeText(setupResult.url)} className="px-2.5 py-1.5 rounded border border-[var(--border)] hover:border-[var(--misaka)] text-[11px] flex items-center gap-1 shrink-0">
               <Copy className="w-3 h-3" /> 复制
             </button>
-            <Button variant="primary" onClick={() => { setTempPassword(null); router.refresh(); }}>关闭</Button>
+            <Button variant="primary" onClick={() => { setSetupResult(null); router.refresh(); }}>关闭</Button>
           </div>
-          <div className="text-[10.5px] text-[var(--text-dim)]">请把这串密码通过私密渠道发给申请人，他首次登录后建议立即改密。</div>
+          <div className="text-[10.5px] text-[var(--text-dim)]">申请人点击链接自行设置密码并登录。链接 {setupResult.expiresInHours} 小时内有效。</div>
         </div>
       )}
     </>

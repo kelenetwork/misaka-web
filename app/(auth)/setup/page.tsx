@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AuthShell } from "@/components/ui/AuthShell";
@@ -12,7 +12,7 @@ type VerifyState =
   | { kind: "ok"; username: string; email: string; expiresAt: string }
   | { kind: "error"; reason: string };
 
-export default function SetupPage() {
+function SetupInner() {
   const router = useRouter();
   const params = useSearchParams();
   const token = params.get("token") ?? "";
@@ -173,5 +173,13 @@ export default function SetupPage() {
         </Button>
       </form>
     </AuthShell>
+  );
+}
+
+export default function SetupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SetupInner />
+    </Suspense>
   );
 }

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { misakaAccounts, tasks } from "@/lib/db/schema";
+import { misakaAccounts, orders, tasks } from "@/lib/db/schema";
 import { requireUser } from "@/lib/api-guard";
 import { patchTaskSchema } from "@/lib/schemas";
 import { json } from "@/lib/http";
@@ -37,6 +37,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const guard = await requireUser(req); if (!guard.ok) return guard.response;
   const { id } = await params;
   const owned = await getOwnedTask(id, guard.user); if (!owned.ok) return owned.response;
+  await db.delete(orders).where(eq(orders.taskId, id));
   await db.delete(tasks).where(eq(tasks.id, id));
   return json({ ok: true });
 }

@@ -8,6 +8,8 @@ import { regions, inventorySnapshots } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { flagOf, fmtPrice, fmtRelative, fmtMb } from "@/lib/util/format";
 import { RefreshCw, Bell, Download } from "lucide-react";
+import { getCurrentUser } from "@/lib/session";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +28,8 @@ async function getInventoryData() {
 }
 
 export default async function InventoryPage() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
   const { allRegions, byRegion } = await getInventoryData();
 
   // Build matrix rows
@@ -51,7 +55,7 @@ export default async function InventoryPage() {
   };
 
   return (
-    <AppShell user={{ name: "可乐", role: "admin" }}>
+    <AppShell user={{ name: user.username, role: user.role }}>
       <Topbar
         crumb="监控 /"
         title="库存矩阵"

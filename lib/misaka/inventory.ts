@@ -155,12 +155,16 @@ export async function upsertPlan(regionId: string, raw: PlanRaw): Promise<{ chan
 
 export async function pollInventoryPublic() {
   const regionList = await fetchRegions();
+  /** 本轮采集到的 plans，按 region/planId 索引，给 task-matching 阶段复用 */
+  const planSnapshotByKey = new Map<string, InventoryPlan>();
+
   for (const region of regionList) {
     await upsertRegion(region);
     try {
       const plans = await fetchPlans(region.id);
       for (const raw of plans) {
         const { changed, becameAvailable, plan } = await upsertPlan(region.id, raw);
+        planSnapshotByKey.set(`${plan.region}/${plan.planId}`, plan);
         if (becameAvailable) {
           inventoryEvents.emit("available", plan);
           // 入审计日志便于实时活动页时间线
@@ -176,6 +180,41 @@ export async function pollInventoryPublic() {
     } catch (err) {
       // Region 可能没有 plans 或 misaka.io 临时 5xx，跳过单 region 失败，继续其他
       console.warn(`[inventory] failed to fetch plans for ${region.id}:`, err instanceof Error ? err.message : err);
+    }
+  }
+
+  // 边沿触发的盲区：用户在『有货状态下』新建任务时，永远不会出现『无→有』边沿，需要主动扫一次。
+  // task-runner 内部已经做了 currentCount >= targetCount 幂等保护，多次调用安全。
+  await matchExistingStockToTasks(planSnapshotByKey);
+}
+
+/** 扫所有 enabled 且未完成的 task，若当前快照可下单则直接派 task-runner。 */
+async function matchExistingStockToTasks(planSnapshotByKey: Map<string, InventoryPlan>) {
+  const { db } = await import("@/lib/db/client");
+  const { tasks } = await import("@/lib/db/schema");
+  const drizzle = await import("drizzle-orm");
+  const { runTask } = await import("@/lib/workers/task-runner");
+
+  let candidates: Array<{ id: string; region: string; planId: number; maxPrice: number }>;
+  try {
+    candidates = await db
+      .select({ id: tasks.id, region: tasks.region, planId: tasks.planId, maxPrice: tasks.maxPrice })
+      .from(tasks)
+      .where(drizzle.and(drizzle.eq(tasks.enabled, true), drizzle.lt(tasks.currentCount, tasks.targetCount)));
+  } catch (err) {
+    console.warn(`[inventory] task match query failed:`, err instanceof Error ? err.message : err);
+    return;
+  }
+
+  for (const task of candidates) {
+    const plan = planSnapshotByKey.get(`${task.region}/${task.planId}`);
+    if (!plan) continue;
+    if (!plan.available) continue;
+    if (plan.priceMonthly > task.maxPrice) continue;
+    try {
+      await runTask(task.id, plan);
+    } catch (err) {
+      console.warn(`[inventory] runTask failed for ${task.id}:`, err instanceof Error ? err.message : err);
     }
   }
 }

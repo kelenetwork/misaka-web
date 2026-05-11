@@ -87,7 +87,7 @@ export default async function TelegramPage() {
           <ul className="grid gap-2 text-[12.5px] text-[var(--text-dim)] leading-[1.7] font-sans">
             <li className="flex items-start gap-2">
               <span className="text-[var(--misaka)] shrink-0">✓</span>
-              <span><b className="text-[var(--text)]">下单成功</b> — 含订单号、发票号、Stripe 付款链接</span>
+              <span><b className="text-[var(--text)]">下单成功</b> — 含订单号、发票号、付款链接</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-[var(--misaka)] shrink-0">✓</span>

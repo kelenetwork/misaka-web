@@ -161,7 +161,16 @@ export async function pollInventoryPublic() {
       const plans = await fetchPlans(region.id);
       for (const raw of plans) {
         const { changed, becameAvailable, plan } = await upsertPlan(region.id, raw);
-        if (becameAvailable) inventoryEvents.emit("available", plan);
+        if (becameAvailable) {
+          inventoryEvents.emit("available", plan);
+          // 入审计日志便于实时活动页时间线
+          const { logAudit } = await import("@/lib/audit");
+          await logAudit(null, "inventory.available", `${plan.region}/${plan.planId}`, {
+            region: plan.region, regionName: regionList.find(r => r.id === plan.region)?.country ?? plan.region,
+            planSlug: plan.planSlug, planName: plan.planName, price: plan.priceMonthly,
+            vcores: plan.vcores, memoryMb: plan.memoryMb,
+          }, null);
+        }
         if (changed) inventoryEvents.emit("change", plan);
       }
     } catch (err) {

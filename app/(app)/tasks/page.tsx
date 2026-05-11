@@ -56,8 +56,8 @@ export default async function TasksPage() {
         }
       />
 
-      <section className="px-8 py-7 grid gap-6 flex-1">
-        <div className="grid grid-cols-4 gap-4">
+      <section className="px-4 sm:px-8 py-5 sm:py-7 grid gap-4 sm:gap-6 flex-1">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {[
             { label: "全部任务", value: stats.total },
             { label: "运行中", value: stats.running, tone: "ok" as const },
@@ -102,8 +102,8 @@ export default async function TasksPage() {
             </Card>
           ) : (
             <Card>
-              {/* Header */}
-              <div className="grid grid-cols-[1fr_180px_160px_120px_100px_120px] bg-[var(--bg-elev-2)] text-[var(--text-faint)] text-[10px] tracking-[0.16em] uppercase">
+              {/* 桌面表头 */}
+              <div className="hidden lg:grid grid-cols-[1fr_180px_160px_120px_100px_120px] bg-[var(--bg-elev-2)] text-[var(--text-faint)] text-[10px] tracking-[0.16em] uppercase">
                 <div className="px-4 py-3">任务</div>
                 <div className="px-4 py-3">区域 / 机型</div>
                 <div className="px-4 py-3">账号</div>
@@ -118,28 +118,46 @@ export default async function TasksPage() {
                 const account = accountMap.get(t.accountId);
                 const progress = Math.min(100, Math.round((t.currentCount / Math.max(t.targetCount, 1)) * 100));
                 const done = t.currentCount >= t.targetCount;
+                const statusBadge = done ? <StatusBadge tone="primary">已完成</StatusBadge>
+                  : t.enabled ? <StatusBadge tone="ok">运行中</StatusBadge>
+                  : <StatusBadge tone="muted">暂停</StatusBadge>;
                 return (
-                  <div key={t.id} className="grid grid-cols-[1fr_180px_160px_120px_100px_120px] border-t border-[var(--border)] items-center hover:bg-[var(--bg-elev-2)] transition-colors">
-                    <div className="px-4 py-3.5">
-                      <Link href={`/tasks/${t.id}`} className="font-serif-italic text-[18px] hover:text-[var(--misaka)] transition-colors">
-                        {t.name}
-                      </Link>
-                      <div className="text-[10px] text-[var(--text-faint)] tracking-[0.08em] mt-0.5">{t.image} · {t.billingCycle}</div>
-                    </div>
-                    <div className="px-4 py-3.5 text-[12px]">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[14px]">{flagOf(region?.countryCode)}</span>
-                        <span className="font-medium">{region?.country ?? t.region}</span>
+                  <div key={t.id} className="flex flex-col gap-3 lg:gap-0 lg:grid lg:grid-cols-[1fr_180px_160px_120px_100px_120px] border-t border-[var(--border)] lg:items-center hover:bg-[var(--bg-elev-2)] transition-colors p-3 lg:p-0">
+                    {/* 任务名（手机端头部 + 状态徽章 + 操作） */}
+                    <div className="lg:px-4 lg:py-3.5 flex items-start justify-between lg:block gap-2">
+                      <div className="min-w-0">
+                        <Link href={`/tasks/${t.id}`} className="font-serif-italic text-[18px] hover:text-[var(--misaka)] transition-colors truncate block">
+                          {t.name}
+                        </Link>
+                        <div className="text-[10px] text-[var(--text-faint)] tracking-[0.08em] mt-0.5">{t.image} · {t.billingCycle}</div>
                       </div>
-                      <div className="text-[10px] text-[var(--text-faint)] tracking-[0.05em] mt-0.5">
-                        {plan?.planName ?? `#${t.planId}`}
+                      {/* 手机：状态徽章贴右 */}
+                      <div className="lg:hidden shrink-0">{statusBadge}</div>
+                    </div>
+
+                    {/* 区域 / 机型 */}
+                    <div className="lg:px-4 lg:py-3.5 text-[12px] flex items-center justify-between lg:block gap-3">
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[14px]">{flagOf(region?.countryCode)}</span>
+                          <span className="font-medium">{region?.country ?? t.region}</span>
+                        </div>
+                        <div className="text-[10px] text-[var(--text-faint)] tracking-[0.05em] mt-0.5">
+                          {plan?.planName ?? `#${t.planId}`}
+                        </div>
                       </div>
                     </div>
-                    <div className="px-4 py-3.5 text-[12px]">
+
+                    {/* 账号 */}
+                    <div className="lg:px-4 lg:py-3.5 text-[12px]">
+                      <div className="text-[10px] text-[var(--text-faint)] lg:hidden uppercase tracking-[0.12em] mb-0.5">账号</div>
                       <div className="font-medium truncate">{account?.label ?? "—"}</div>
                       <div className="text-[10px] text-[var(--text-faint)] truncate">{account?.email}</div>
                     </div>
-                    <div className="px-4 py-3.5 text-[12px]">
+
+                    {/* 上限 / 进度 */}
+                    <div className="lg:px-4 lg:py-3.5 text-[12px]">
+                      <div className="text-[10px] text-[var(--text-faint)] lg:hidden uppercase tracking-[0.12em] mb-0.5">上限 / 进度</div>
                       <div className="font-medium">≤ {fmtPrice(t.maxPrice)}</div>
                       <div className="flex items-center gap-1.5 mt-1">
                         <div className="flex-1 h-1 bg-[var(--bg-elev-3)] rounded-full overflow-hidden">
@@ -148,19 +166,19 @@ export default async function TasksPage() {
                         <span className="text-[10px] text-[var(--text-dim)] font-mono shrink-0">{t.currentCount}/{t.targetCount}</span>
                       </div>
                     </div>
-                    <div className="px-4 py-3.5">
-                      {done ? <StatusBadge tone="primary">已完成</StatusBadge>
-                        : t.enabled ? <StatusBadge tone="ok">运行中</StatusBadge>
-                        : <StatusBadge tone="muted">暂停</StatusBadge>}
-                    </div>
-                    <div className="px-4 py-3.5 flex justify-end gap-1">
+
+                    {/* 状态 - 桌面 only */}
+                    <div className="hidden lg:block lg:px-4 lg:py-3.5">{statusBadge}</div>
+
+                    {/* 操作 */}
+                    <div className="lg:px-4 lg:py-3.5 flex justify-end gap-1.5">
                       <form action={`/api/tasks/${t.id}/toggle`} method="POST">
-                        <button type="submit" className="w-7 h-7 grid place-items-center border border-[var(--border)] rounded-md text-[var(--text-dim)] hover:text-[var(--misaka)] hover:border-[var(--misaka)] transition-colors" title={t.enabled ? "暂停" : "启动"}>
-                          {t.enabled ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                        <button type="submit" className="w-8 h-8 lg:w-7 lg:h-7 grid place-items-center border border-[var(--border)] rounded-md text-[var(--text-dim)] hover:text-[var(--misaka)] hover:border-[var(--misaka)] transition-colors" title={t.enabled ? "暂停" : "启动"}>
+                          {t.enabled ? <Pause className="w-4 h-4 lg:w-3.5 lg:h-3.5" /> : <Play className="w-4 h-4 lg:w-3.5 lg:h-3.5" />}
                         </button>
                       </form>
-                      <Link href={`/tasks/${t.id}`} className="w-7 h-7 grid place-items-center border border-[var(--border)] rounded-md text-[var(--text-dim)] hover:text-[var(--misaka)] hover:border-[var(--misaka)] transition-colors" title="编辑">
-                        <Edit3 className="w-3.5 h-3.5" />
+                      <Link href={`/tasks/${t.id}`} className="w-8 h-8 lg:w-7 lg:h-7 grid place-items-center border border-[var(--border)] rounded-md text-[var(--text-dim)] hover:text-[var(--misaka)] hover:border-[var(--misaka)] transition-colors" title="编辑">
+                        <Edit3 className="w-4 h-4 lg:w-3.5 lg:h-3.5" />
                       </Link>
                     </div>
                   </div>

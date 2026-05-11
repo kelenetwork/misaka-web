@@ -28,10 +28,10 @@ export default async function TelegramPage() {
     <AppShell user={user}>
       <Topbar crumb="账户 /" title="Telegram 绑定" />
 
-      <section className="px-8 py-7 grid gap-6 max-w-3xl">
+      <section className="px-4 sm:px-8 py-5 sm:py-7 grid gap-6 max-w-3xl">
         <SectionHead title="状态" />
         <Card className="px-6 py-5">
-          <div className="grid grid-cols-[120px_1fr] gap-y-3 text-[13px] items-center">
+          <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[120px_1fr] gap-y-3 gap-x-3 text-[12px] sm:text-[13px] items-center">
             <div className="text-[10px] tracking-[0.16em] uppercase text-[var(--text-faint)]">当前状态</div>
             <div>
               {telegramUserId ? (

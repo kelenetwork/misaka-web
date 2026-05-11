@@ -27,7 +27,7 @@ export default async function ApplicationsPage() {
     <AppShell user={user}>
       <Topbar crumb="管理 /" title="申请审批" />
 
-      <section className="px-8 py-7 grid gap-7 flex-1">
+      <section className="px-4 sm:px-8 py-5 sm:py-7 grid gap-7 flex-1">
         <div>
           <SectionHead title="待审核" count={`${pending.length} 个`} />
           <div className="mt-3">
@@ -37,7 +37,7 @@ export default async function ApplicationsPage() {
               </Card>
             ) : (
               <Card>
-                <div className="grid grid-cols-[160px_1fr_120px_130px_180px] bg-[var(--bg-elev-2)] text-[var(--text-faint)] text-[10px] tracking-[0.16em] uppercase">
+                <div className="hidden lg:grid grid-cols-[160px_1fr_120px_130px_180px] bg-[var(--bg-elev-2)] text-[var(--text-faint)] text-[10px] tracking-[0.16em] uppercase">
                   <div className="px-4 py-3">提交时间</div>
                   <div className="px-4 py-3">申请人 / 理由</div>
                   <div className="px-4 py-3">来源 IP</div>
@@ -66,7 +66,7 @@ export default async function ApplicationsPage() {
           <div>
             <SectionHead title="近期审批记录" count={`通过 ${recentDone.length} · 拒绝 ${recentRejected.length}`} />
             <Card className="mt-3">
-              <div className="grid grid-cols-[160px_1fr_120px_120px] bg-[var(--bg-elev-2)] text-[var(--text-faint)] text-[10px] tracking-[0.16em] uppercase">
+              <div className="hidden lg:grid grid-cols-[160px_1fr_120px_120px] bg-[var(--bg-elev-2)] text-[var(--text-faint)] text-[10px] tracking-[0.16em] uppercase">
                 <div className="px-4 py-3">时间</div>
                 <div className="px-4 py-3">申请人</div>
                 <div className="px-4 py-3">邮箱</div>

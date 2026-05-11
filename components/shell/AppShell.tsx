@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Sidebar } from "./Sidebar";
+import { MobileShell } from "./MobileShell";
 
 type ShellUser = { username: string; role: "user" | "admin" } | { name: string; role: "user" | "admin" };
 
@@ -16,16 +16,15 @@ export function AppShell({
   children: ReactNode;
 }) {
   return (
-    <div className="grid grid-cols-[240px_1fr] min-h-screen">
-      <Sidebar user={{ name: displayName(user), role: user.role }} />
-      <main className="flex flex-col min-w-0">{children}</main>
-    </div>
+    <MobileShell user={{ name: displayName(user), role: user.role }}>
+      {children}
+    </MobileShell>
   );
 }
 
 export function Footer() {
   return (
-    <footer className="px-8 py-8 border-t border-[var(--border)] text-[var(--text-faint)] text-[10.5px] tracking-[0.08em] flex justify-between mt-auto">
+    <footer className="px-4 sm:px-8 py-6 sm:py-8 border-t border-[var(--border)] text-[var(--text-faint)] text-[10px] sm:text-[10.5px] tracking-[0.08em] flex flex-col sm:flex-row gap-2 sm:gap-0 sm:justify-between mt-auto">
       <span>
         misaka-web · v0.1.0 ·{" "}
         <kbd className="px-1.5 py-0.5 border border-[var(--border)] rounded bg-[var(--bg-elev-2)] text-[9.5px] mx-0.5 text-[var(--text-dim)]">⌘</kbd>

@@ -117,8 +117,8 @@ export default async function ActivityPage() {
         right={<StatusPill text={lastUpdate ? `最新 · ${fmtRelative(lastUpdate)}` : "暂无活动"} />}
       />
 
-      <section className="px-8 py-7 grid gap-6 flex-1">
-        <div className="grid grid-cols-4 gap-4">
+      <section className="px-4 sm:px-8 py-5 sm:py-7 grid gap-6 flex-1">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {[
             { label: "近 24h 事件", v: stats.total },
             { label: "库存上架", v: stats.inventory, tone: "ok" },
@@ -144,7 +144,7 @@ export default async function ActivityPage() {
           </Card>
         ) : (
           <Card>
-            <div className="grid grid-cols-[100px_88px_1fr_180px] bg-[var(--bg-elev-2)] text-[var(--text-faint)] text-[10px] tracking-[0.16em] uppercase">
+            <div className="hidden lg:grid grid-cols-[100px_88px_1fr_180px] bg-[var(--bg-elev-2)] text-[var(--text-faint)] text-[10px] tracking-[0.16em] uppercase">
               <div className="px-4 py-3">时间</div>
               <div className="px-4 py-3">类型</div>
               <div className="px-4 py-3">事件</div>
@@ -154,10 +154,10 @@ export default async function ActivityPage() {
               const meta = actionMeta(l.action);
               const actor = l.actorId ? actorMap.get(l.actorId) ?? l.actorId.slice(0, 8) : "system";
               return (
-                <div key={l.id} className="grid grid-cols-[100px_88px_1fr_180px] border-t border-[var(--border)] items-center hover:bg-[var(--bg-elev-2)] transition-colors">
-                  <div className="px-4 py-3 text-[11px] text-[var(--text-dim)] font-mono">{fmtRelative(l.createdAt)}</div>
-                  <div className="px-4 py-3"><StatusBadge tone={meta.tone}>{meta.label}</StatusBadge></div>
-                  <div className="px-4 py-3 text-[12.5px]">
+                <div key={l.id} className="flex flex-col gap-2 lg:gap-0 lg:grid lg:grid-cols-[100px_88px_1fr_180px] border-t border-[var(--border)] lg:items-center hover:bg-[var(--bg-elev-2)] transition-colors p-3 lg:p-0">
+                  <div className="lg:px-4 lg:py-3 text-[11px] text-[var(--text-dim)] font-mono flex items-center gap-2"><span className="lg:hidden">{fmtRelative(l.createdAt)} · {actor === "system" ? "system" : actor}</span><span className="hidden lg:inline">{fmtRelative(l.createdAt)}</span></div>
+                  <div className="lg:px-4 lg:py-3"><StatusBadge tone={meta.tone}>{meta.label}</StatusBadge></div>
+                  <div className="lg:px-4 lg:py-3 text-[12.5px]">
                     <div className="leading-snug">
                       <span className="text-[var(--text)]">{detailString(l.action, l.details) || l.target}</span>
                     </div>
@@ -165,7 +165,7 @@ export default async function ActivityPage() {
                       <div className="text-[10px] text-[var(--text-faint)] mt-0.5 font-mono">{l.target}</div>
                     )}
                   </div>
-                  <div className="px-4 py-3 text-[11px] text-[var(--text-dim)] font-mono">
+                  <div className="hidden lg:block lg:px-4 lg:py-3 text-[11px] text-[var(--text-dim)] font-mono">
                     {actor === "system" ? (
                       <span className="text-[var(--text-faint)] italic">system</span>
                     ) : (

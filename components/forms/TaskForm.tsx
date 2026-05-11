@@ -130,7 +130,7 @@ export function TaskForm({
   return (
     <form onSubmit={submit} className="grid gap-5">
       {/* === Section 1: Basics === */}
-      <Card className="px-5 py-5 sm:px-6">
+      <Card className="px-4 py-4 sm:px-6 sm:py-5">
         <Title>1. 基础</Title>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="任务名称" hint="给这个任务起个好记的名字">
@@ -147,7 +147,7 @@ export function TaskForm({
       </Card>
 
       {/* === Section 2: Region === */}
-      <Card className="px-5 py-5 sm:px-6">
+      <Card className="px-4 py-4 sm:px-6 sm:py-5">
         <Title>
           2. 区域
           {selectedRegion && (
@@ -170,7 +170,7 @@ export function TaskForm({
         </div>
 
         {/* Region cards grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[360px] overflow-y-auto pr-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[280px] sm:max-h-[360px] overflow-y-auto pr-1">
           {(showAllRegions ? filteredRegions : filteredRegions.slice(0, 12)).map((r) => {
             const stats = regionStats.get(r.id)!;
             const isSelected = form.region === r.id;
@@ -246,7 +246,7 @@ export function TaskForm({
                   type="button"
                   onClick={() => setForm({ ...form, planId: p.planId, maxPrice: Math.max(form.maxPrice, p.priceMonthly) })}
                   className={[
-                    "w-full grid grid-cols-[auto_1fr_auto] sm:grid-cols-[auto_2fr_1.6fr_auto] gap-3 sm:gap-4 items-center px-3 py-2.5 text-left transition-colors",
+                    "w-full grid grid-cols-[auto_1fr_auto] lg:grid-cols-[auto_2fr_1.6fr_auto] gap-3 sm:gap-4 items-center px-3 py-2.5 text-left transition-colors",
                     idx > 0 ? "border-t border-[var(--border)]" : "",
                     isSelected
                       ? "bg-[var(--misaka-dim)]/40"
@@ -272,7 +272,7 @@ export function TaskForm({
                     </div>
                   </div>
                   {/* specs */}
-                  <div className="hidden sm:flex items-center gap-3 text-[11px] text-[var(--text-dim)] font-mono">
+                  <div className="hidden lg:flex items-center gap-3 text-[11px] text-[var(--text-dim)] font-mono">
                     <Spec label="vCPU" value={`${p.vcores}C`} />
                     <Spec label="RAM" value={fmtMb(p.memoryMb)} />
                     <Spec label="Disk" value={fmtMb(p.diskMb)} />
@@ -294,7 +294,7 @@ export function TaskForm({
       )}
 
       {/* === Section 4: Strategy === */}
-      <Card className="px-5 py-5 sm:px-6">
+      <Card className="px-4 py-4 sm:px-6 sm:py-5">
         <Title>4. 策略</Title>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="价格上限 (USD/月)" hint="实际价高于此值不下单">
@@ -349,11 +349,11 @@ export function TaskForm({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2 sticky bottom-0 bg-[rgba(10,10,10,0.85)] backdrop-blur py-3 -mx-5 sm:-mx-6 px-5 sm:px-6 border-t border-[var(--border)]">
-        <Button type="submit" variant="primary" disabled={busy}>
+      <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 sticky bottom-0 bg-[rgba(10,10,10,0.92)] backdrop-blur py-3 -mx-5 sm:-mx-6 px-5 sm:px-6 border-t border-[var(--border)]">
+        <Button type="button" variant="ghost" disabled={busy} onClick={() => router.push("/tasks")} className="sm:flex-initial justify-center">取消</Button>
+        <Button type="submit" variant="primary" disabled={busy} className="sm:flex-initial flex-1 justify-center">
           {mode === "edit" ? <><Save className="w-3.5 h-3.5" /> 保存修改</> : <><ArrowRight className="w-3.5 h-3.5" /> 创建任务</>}
         </Button>
-        <Button type="button" variant="ghost" disabled={busy} onClick={() => router.push("/tasks")}>取消</Button>
       </div>
     </form>
   );
@@ -361,7 +361,7 @@ export function TaskForm({
 
 function Title({ children }: { children: React.ReactNode }) {
   return (
-    <div className="font-serif-italic text-[20px] mb-4 flex items-baseline">
+    <div className="font-serif-italic text-[18px] sm:text-[20px] mb-3 sm:mb-4 flex flex-wrap items-baseline">
       {children}
     </div>
   );

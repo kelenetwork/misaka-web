@@ -196,3 +196,53 @@ describe("runTask retry state", () => {
     expect(await db.select().from(orders)).toHaveLength(0);
   });
 });
+
+
+describe("runTask concurrency / race conditions", () => {
+  it("two concurrent runTask calls on the same task with targetCount=3 should not exceed 3 orders", async () => {
+    // 把 task targetCount 设 3，并发跑 5 次 runTask
+    // 每次 createInstance 成功返回不同 orderId
+    await db.update(tasks).set({ targetCount: 3 }).where(eq(tasks.id, "task-1"));
+
+    let nextOrderId = 1000;
+    createInstanceMock.mockImplementation(async () => {
+      // 模拟 misaka.io 真实 API 50ms 延迟，让事务竞态有机会暴露
+      await new Promise((r) => setTimeout(r, 50));
+      const orderId = nextOrderId++;
+      return { orderIds: [orderId], invoiceId: orderId * 10, invoiceUrl: `https://pay.example/${orderId}` };
+    });
+
+    await Promise.all(Array.from({ length: 5 }, () => runTask("task-1", plan)));
+
+    const task = await db.query.tasks.findFirst({ where: eq(tasks.id, "task-1") });
+    const created = await db.query.orders.findMany({ where: eq(orders.status, "created") });
+    // task-runner 内部用 sqlite.transaction + currentCount 检查保证幂等
+    // 但 createInstance 已经被调多次（misaka 已经收到下单），所以 misaka 那边可能产生多余订单
+    // 我们这里只断言 DB 一致性：currentCount 不超过 targetCount，且 orders 表 created 行数 == currentCount
+    expect(task?.currentCount).toBeLessThanOrEqual(3);
+    expect(created.length).toBe(task?.currentCount);
+    // task 应该已经 disabled（stopAfterTarget = true，达到 targetCount）
+    if (task?.currentCount === 3) {
+      expect(task?.enabled).toBe(false);
+    }
+  });
+
+  it("task with targetCount=1 should not create duplicate order under high concurrency", async () => {
+    await db.update(tasks).set({ targetCount: 1 }).where(eq(tasks.id, "task-1"));
+
+    createInstanceMock.mockImplementation(async () => {
+      await new Promise((r) => setTimeout(r, 30));
+      return { orderIds: [9999], invoiceId: 88888, invoiceUrl: "https://pay.example/x" };
+    });
+
+    // 10 个并发 runTask 模拟极端竞态
+    await Promise.all(Array.from({ length: 10 }, () => runTask("task-1", plan)));
+
+    const task = await db.query.tasks.findFirst({ where: eq(tasks.id, "task-1") });
+    const created = await db.query.orders.findMany({ where: eq(orders.status, "created") });
+    // DB 层最多 1 单
+    expect(task?.currentCount).toBe(1);
+    expect(created.length).toBe(1);
+    expect(task?.enabled).toBe(false);
+  });
+});

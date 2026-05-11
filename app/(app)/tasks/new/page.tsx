@@ -23,7 +23,7 @@ export default async function NewTaskPage() {
     return (
       <AppShell user={user}>
         <Topbar crumb="自动化 / 任务 /" title="新建" />
-        <section className="px-8 py-7 grid gap-6 max-w-2xl">
+        <section className="px-4 sm:px-8 py-5 sm:py-7 grid gap-6 max-w-2xl">
           <Card className="px-7 py-7">
             <div className="font-serif-italic text-[22px] mb-2">先添加 misaka 账号</div>
             <div className="text-[12px] text-[var(--text-dim)] mb-4 leading-[1.7]">
@@ -40,7 +40,7 @@ export default async function NewTaskPage() {
   return (
     <AppShell user={user}>
       <Topbar crumb="自动化 / 任务 /" title="新建任务" />
-      <section className="px-8 py-7 grid gap-6 max-w-3xl">
+      <section className="px-4 sm:px-8 py-5 sm:py-7 grid gap-6 max-w-3xl">
         <TaskForm accounts={accounts} regions={allRegions} plans={allPlans} />
       </section>
       <Footer />

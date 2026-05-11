@@ -9,6 +9,7 @@ import { db } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
 import { desc } from "drizzle-orm";
 import { fmtRelative } from "@/lib/util/format";
+import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export default async function AdminUsersPage() {
       <Topbar crumb="管理 /" title="用户 / 系统" />
 
       <section className="px-4 sm:px-8 py-5 sm:py-7 grid gap-6 flex-1">
-        <SectionHead title="所有用户" count={`${all.length} 个`} />
+        <SectionHead title="所有用户" count={`${all.length} 个`} actions={<CreateUserDialog />} />
 
         <Card>
           <div className="hidden lg:grid grid-cols-[1fr_180px_120px_110px_110px_120px] bg-[var(--bg-elev-2)] text-[var(--text-faint)] text-[10px] tracking-[0.16em] uppercase">

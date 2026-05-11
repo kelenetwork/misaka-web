@@ -9,6 +9,7 @@ import { db } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { TelegramBindClient } from "@/components/telegram/TelegramBindClient";
+import { TelegramUnbindButton } from "@/components/telegram/TelegramUnbindButton";
 import { getBotInfo } from "@/lib/telegram/info";
 
 export const dynamic = "force-dynamic";
@@ -34,9 +35,12 @@ export default async function TelegramPage() {
             <div className="text-[10px] tracking-[0.16em] uppercase text-[var(--text-faint)]">当前状态</div>
             <div>
               {telegramUserId ? (
-                <div className="flex items-center gap-2">
-                  <StatusBadge tone="ok">已绑定</StatusBadge>
-                  <span className="font-mono text-[12px] text-[var(--text-dim)]">TG ID: {telegramUserId}</span>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <StatusBadge tone="ok">已绑定</StatusBadge>
+                    <span className="font-mono text-[12px] text-[var(--text-dim)]">TG ID: {telegramUserId}</span>
+                  </div>
+                  <TelegramUnbindButton />
                 </div>
               ) : (
                 <StatusBadge tone="muted">未绑定</StatusBadge>

@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, StatCard } from "@/components/ui/Card";
@@ -62,6 +64,9 @@ export type InventoryStats = {
   plansTotal: number;
   plansInStock: number;
   lastUpdate: string | null;
+  activeTasks: number;
+  enabledTasks: number;
+  todayOrders: number;
 };
 
 type ContinentTab = {
@@ -75,7 +80,7 @@ const CONTINENT_TABS: ContinentTab[] = [
   { label: "欧洲", value: "Europe" },
   { label: "北美", value: "North America" },
   { label: "南美", value: "South America" },
-  { label: "大洋洲", value: "Oceania" },
+  // misaka.io 库存暂无 Oceania 节点
   { label: "非洲", value: "Africa" },
 ];
 
@@ -98,6 +103,20 @@ function matchesKeyword(row: InventoryRow, keyword: string) {
     .join(" ")
     .toLowerCase();
   return haystack.includes(keyword);
+}
+
+function formatCsvValue(value: string | number | boolean | null) {
+  const text = value === null ? "" : String(value);
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function formatInventoryFilename(date = new Date()) {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `inventory-${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}.csv`;
+}
+
+function normalizeContinent(value: string | null) {
+  return CONTINENT_TABS.some((tab) => tab.value === value) ? value : null;
 }
 
 function InventoryTable({ rows, emptyText }: { rows: InventoryRow[]; emptyText: string }) {
@@ -180,9 +199,36 @@ export function InventoryMatrix({
   stats: InventoryStats;
   popularIds: string[];
 }) {
-  const [keyword, setKeyword] = useState("");
-  const [onlyInStock, setOnlyInStock] = useState(false);
-  const [continent, setContinent] = useState<string | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [keyword, setKeyword] = useState(() => searchParams.get("q") ?? "");
+  const [onlyInStock, setOnlyInStock] = useState(() => searchParams.get("stock") === "1");
+  const [continent, setContinent] = useState<string | null>(() => normalizeContinent(searchParams.get("continent")));
+
+  const replaceQuery = (next: { keyword?: string; onlyInStock?: boolean; continent?: string | null }) => {
+    const params = new URLSearchParams(searchParams.toString());
+    const nextKeyword = next.keyword ?? keyword;
+    const nextOnlyInStock = next.onlyInStock ?? onlyInStock;
+    const nextContinent = next.continent !== undefined ? next.continent : continent;
+
+    if (nextKeyword.trim()) params.set("q", nextKeyword.trim());
+    else params.delete("q");
+
+    if (nextOnlyInStock) params.set("stock", "1");
+    else params.delete("stock");
+
+    if (nextContinent) params.set("continent", nextContinent);
+    else params.delete("continent");
+
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  };
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => replaceQuery({ keyword }), 300);
+    return () => window.clearTimeout(timeout);
+  }, [keyword]);
 
   const popularIdSet = useMemo(() => new Set(popularIds), [popularIds]);
   const normalizedKeyword = keyword.trim().toLowerCase();
@@ -209,7 +255,54 @@ export function InventoryMatrix({
 
   const emptyText = rows.length === 0 ? "等待 inventory poller 首次轮询完成...通常 30 秒内出现数据" : "没有匹配的区域";
 
+  const exportCsv = () => {
+    const header = [
+      "region_id",
+      "country",
+      "continent",
+      "plan_name",
+      "plan_id",
+      "price_monthly",
+      "vcores",
+      "memory_mb",
+      "disk_mb",
+      "transfer_mb",
+      "available",
+      "updated_at",
+    ];
+    const body = filteredRows.flatMap((row) =>
+      row.plans.map((plan) =>
+        [
+          row.region.id,
+          row.region.country,
+          row.region.continent ?? "",
+          plan.planName,
+          plan.planId,
+          plan.priceMonthly,
+          plan.vcores,
+          plan.memoryMb,
+          plan.diskMb,
+          plan.transferMb,
+          plan.available,
+          plan.updatedAt,
+        ]
+          .map(formatCsvValue)
+          .join(",")
+      )
+    );
+    const blob = new Blob([[header.join(","), ...body].join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = formatInventoryFilename();
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
   return (
+
     <>
       <div className="grid grid-cols-4 gap-4 fade-up">
         <StatCard
@@ -224,8 +317,8 @@ export function InventoryMatrix({
           unit={`/ ${stats.plansTotal}`}
           delta={stats.plansInStock > 0 ? `${Math.round((stats.plansInStock / Math.max(stats.plansTotal, 1)) * 100)}% 上架` : "全部缺货"}
         />
-        <StatCard label="活跃任务" value={0} unit="个" delta="0 等待 · 0 暂停" deltaTone="neutral" />
-        <StatCard label="今日下单" value={0} unit="单" delta="尚无订单" deltaTone="neutral" />
+        <StatCard label="活跃任务" value={stats.activeTasks} unit="个" delta={`${stats.enabledTasks} 启用中`} deltaTone="neutral" />
+        <StatCard label="今日下单" value={stats.todayOrders} unit="单" delta={stats.todayOrders > 0 ? `今日已下 ${stats.todayOrders} 单` : "今日尚无订单"} deltaTone="neutral" />
       </div>
 
       <div className="fade-up" style={{ animationDelay: "80ms" }}>
@@ -242,7 +335,10 @@ export function InventoryMatrix({
               <input
                 type="checkbox"
                 checked={onlyInStock}
-                onChange={(event) => setOnlyInStock(event.target.checked)}
+                onChange={(event) => {
+                  setOnlyInStock(event.target.checked);
+                  replaceQuery({ onlyInStock: event.target.checked });
+                }}
                 className="h-4 w-4 accent-[var(--misaka)]"
               />
               仅显示有货
@@ -255,7 +351,10 @@ export function InventoryMatrix({
                 <button
                   key={tab.label}
                   type="button"
-                  onClick={() => setContinent(tab.value)}
+                  onClick={() => {
+                    setContinent(tab.value);
+                    replaceQuery({ continent: tab.value });
+                  }}
                   className={[
                     "h-8 rounded-md border px-3 font-mono text-[11px] transition-colors",
                     active
@@ -278,8 +377,8 @@ export function InventoryMatrix({
           count={`${filteredRows.length} 区域 · ${stats.plansTotal} 机型`}
           actions={
             <>
-              <Button variant="ghost"><Download className="w-3.5 h-3.5" /> 导出 CSV</Button>
-              <Button variant="primary">+ 新建任务</Button>
+              <Button variant="ghost" onClick={exportCsv}><Download className="w-3.5 h-3.5" /> 导出 CSV</Button>
+              <Link href="/tasks/new"><Button variant="primary">+ 新建任务</Button></Link>
             </>
           }
         />

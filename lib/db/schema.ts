@@ -87,6 +87,14 @@ export const orders = sqliteTable("orders", {
   paidAt: integer("paid_at", { mode: "timestamp" }),
 });
 
+export const bindCodes = sqliteTable("bind_codes", {
+  code: text("code").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+  usedAt: integer("used_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
 export const regions = sqliteTable("regions", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -154,6 +162,7 @@ export const account = sqliteTable("account", {
 });
 export const verification = sqliteTable("verification", { id: text("id").primaryKey(), identifier: text("identifier").notNull(), value: text("value").notNull(), expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(), createdAt: integer("created_at", { mode: "timestamp" }), updatedAt: integer("updated_at", { mode: "timestamp" }) });
 
-export const userRelations = relations(users, ({ many }) => ({ accounts: many(misakaAccounts), tasks: many(tasks) }));
+export const userRelations = relations(users, ({ many }) => ({ accounts: many(misakaAccounts), tasks: many(tasks), bindCodes: many(bindCodes) }));
 export const misakaAccountRelations = relations(misakaAccounts, ({ one, many }) => ({ user: one(users, { fields: [misakaAccounts.userId], references: [users.id] }), tasks: many(tasks) }));
 export const taskRelations = relations(tasks, ({ one, many }) => ({ user: one(users, { fields: [tasks.userId], references: [users.id] }), account: one(misakaAccounts, { fields: [tasks.accountId], references: [misakaAccounts.id] }), orders: many(orders) }));
+export const bindCodeRelations = relations(bindCodes, ({ one }) => ({ user: one(users, { fields: [bindCodes.userId], references: [users.id] }) }));

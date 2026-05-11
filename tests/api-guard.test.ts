@@ -27,7 +27,10 @@ beforeEach(async () => {
     CREATE TABLE users (
       id text PRIMARY KEY NOT NULL,
       username text NOT NULL UNIQUE,
+      name text NOT NULL DEFAULT '',
       email text NOT NULL UNIQUE,
+      email_verified integer NOT NULL DEFAULT 0,
+      image text,
       password_hash text NOT NULL,
       role text NOT NULL DEFAULT 'user',
       status text NOT NULL DEFAULT 'active',

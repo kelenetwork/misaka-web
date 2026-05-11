@@ -1,6 +1,9 @@
+import { NextRequest } from "next/server";
+import { requireUser } from "@/lib/api-guard";
 import { inventoryEvents, type InventoryPlan } from "@/lib/misaka/inventory";
 export const runtime = "nodejs";
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const guard = await requireUser(req); if (!guard.ok) return guard.response;
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     start(controller) {

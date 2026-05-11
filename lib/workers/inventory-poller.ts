@@ -3,6 +3,7 @@ import { db } from "@/lib/db/client";
 import { misakaAccounts, systemConfig } from "@/lib/db/schema";
 import { MisakaClient } from "@/lib/misaka/client";
 import { inventoryEvents, pollInventory } from "@/lib/misaka/inventory";
+import { logAudit } from "@/lib/audit";
 import { runMatchingTasks } from "./task-runner";
 import { cleanupExpiredRateLimits } from "@/lib/rate-limit";
 
@@ -21,9 +22,22 @@ export async function seedSystemConfig() {
 
 export async function tickInventoryPoller() {
   await cleanupExpiredRateLimits();
-  const account = await db.query.misakaAccounts.findFirst({ where: eq(misakaAccounts.status, "active") });
-  if (!account) return;
-  await pollInventory(new MisakaClient(account));
+  try {
+    await pollInventory(new MisakaClient(null));
+    return;
+  } catch (error) {
+    const publicError = error instanceof Error ? error.message : String(error);
+    const account = await db.query.misakaAccounts.findFirst({ where: eq(misakaAccounts.status, "active") });
+    if (!account) {
+      await logAudit(null, "inventory.poll.skipped", "misaka", { publicError }, null);
+      return;
+    }
+    try {
+      await pollInventory(new MisakaClient(account));
+    } catch (fallbackError) {
+      await logAudit(null, "inventory.poll.skipped", "misaka", { publicError, fallbackError: fallbackError instanceof Error ? fallbackError.message : String(fallbackError) }, null);
+    }
+  }
 }
 
 export async function startInventoryPoller() {

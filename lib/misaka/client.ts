@@ -13,10 +13,11 @@ const API_BASE = "https://app.misaka.io";
 
 export class MisakaClient {
   private forbiddenCount = 0;
-  constructor(private readonly account: MisakaAccountRecord, private readonly fetcher: MisakaFetch = fetch as unknown as MisakaFetch) {}
+  constructor(private readonly account: MisakaAccountRecord | null, private readonly fetcher: MisakaFetch = fetch as unknown as MisakaFetch) {}
 
   async login() {
     // TODO: reverse engineer the current misaka.io login endpoint and payload from an authenticated browser capture.
+    if (!this.account) throw new Error("Misaka account is required");
     const password = decrypt(this.account.passwordEncrypted);
     const session = JSON.stringify({ placeholder: true, email: this.account.email, passwordLength: password.length, createdAt: new Date().toISOString() });
     await db.update(misakaAccounts).set({ sessionCacheEncrypted: encrypt(session), lastLoginAt: new Date(), status: "active", rateLimitedUntil: null }).where(eq(misakaAccounts.id, this.account.id));
@@ -48,6 +49,11 @@ export class MisakaClient {
   }
 
   private async request(path: string, init: RequestInit = {}) {
+    if (!this.account) {
+      const response = await this.fetcher(`${API_BASE}${path}`, init);
+      if (!response.ok) throw new Error(`misaka.io request failed: ${response.status} ${await response.text()}`);
+      return response.json();
+    }
     if (this.account.status === "rate_limited" && this.account.rateLimitedUntil && this.account.rateLimitedUntil > new Date()) throw new Error("Misaka account is rate limited");
     const session = this.account.sessionCacheEncrypted ? decrypt(this.account.sessionCacheEncrypted) : await this.login();
     const response = await this.fetcher(`${API_BASE}${path}`, { ...init, headers: { cookie: session, ...(init.headers ?? {}) } });
@@ -57,6 +63,7 @@ export class MisakaClient {
   }
 
   private async recordForbidden() {
+    if (!this.account) return;
     this.forbiddenCount += 1;
     if (this.forbiddenCount >= 3) {
       await db.update(misakaAccounts).set({ status: "rate_limited", rateLimitedUntil: new Date(Date.now() + 30 * 60_000) }).where(and(eq(misakaAccounts.id, this.account.id), eq(misakaAccounts.status, "active")));

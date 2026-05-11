@@ -35,6 +35,18 @@ export const applications = sqliteTable("applications", {
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
+/** Setup tokens：管理员审批申请后生成，用户凭此自助设置密码完成注册。 */
+export const setupTokens = sqliteTable("setup_tokens", {
+  token: text("token").primaryKey(),
+  applicationId: text("application_id").notNull().references(() => applications.id, { onDelete: "cascade" }),
+  username: text("username").notNull(),
+  email: text("email").notNull(),
+  approvedBy: text("approved_by").references(() => users.id),
+  expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+  usedAt: integer("used_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
 export const misakaAccounts = sqliteTable("misaka_accounts", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),

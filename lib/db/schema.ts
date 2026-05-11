@@ -9,8 +9,13 @@ const timestamps = {
 export const users = sqliteTable("users", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   username: text("username").notNull().unique(),
+  // `name` is required by better-auth; we mirror username here.
+  name: text("name").notNull().default(""),
   email: text("email").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
+  // better-auth core fields
+  emailVerified: integer("email_verified", { mode: "boolean" }).notNull().default(false),
+  image: text("image"),
+  passwordHash: text("password_hash").notNull().default(""),
   role: text("role", { enum: ["user", "admin"] }).notNull().default("user"),
   status: text("status", { enum: ["active", "banned"] }).notNull().default("active"),
   telegramUserId: text("telegram_user_id").unique(),

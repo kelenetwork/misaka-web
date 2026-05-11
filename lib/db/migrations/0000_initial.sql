@@ -169,8 +169,11 @@ CREATE TABLE `tasks` (
 CREATE TABLE `users` (
 	`id` text PRIMARY KEY NOT NULL,
 	`username` text NOT NULL,
+	`name` text DEFAULT '' NOT NULL,
 	`email` text NOT NULL,
-	`password_hash` text NOT NULL,
+	`email_verified` integer DEFAULT false NOT NULL,
+	`image` text,
+	`password_hash` text DEFAULT '' NOT NULL,
 	`role` text DEFAULT 'user' NOT NULL,
 	`status` text DEFAULT 'active' NOT NULL,
 	`telegram_user_id` text,

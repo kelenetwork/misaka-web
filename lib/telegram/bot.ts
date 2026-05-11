@@ -22,15 +22,33 @@ const BOT_COMMANDS: Array<{ command: string; description: string }> = [
   { command: "help", description: "❓ 命令帮助" },
 ];
 
+/** 给 setMyCommands 加重试（网络冷启动失败时再试 3 次）。 */
+async function setCommandsWithRetry(b: Bot, retries = 3): Promise<void> {
+  for (let i = 0; i < retries; i += 1) {
+    try {
+      await b.api.setMyCommands(BOT_COMMANDS);
+      console.log(`[telegram] setMyCommands ok (${BOT_COMMANDS.length} commands)`);
+      return;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[telegram] setMyCommands attempt ${i + 1}/${retries} failed:`, msg);
+      if (i < retries - 1) await new Promise((r) => setTimeout(r, 2000 * (i + 1)));
+    }
+  }
+}
+
 export async function startTelegramBot() {
   if (!process.env.TELEGRAM_BOT_TOKEN || bot) return;
   bot = new Bot(process.env.TELEGRAM_BOT_TOKEN);
   registerCommands(bot);
 
-  // 注册到 Telegram 客户端的命令菜单；失败不阻塞启动。
-  bot.api.setMyCommands(BOT_COMMANDS).catch((err) => {
-    console.warn("[telegram] setMyCommands failed:", err instanceof Error ? err.message : err);
+  // 先 init 拿到 me 信息，再注册命令菜单（确保 grammy 网络栈已就绪）
+  await bot.init().catch((err) => {
+    console.warn("[telegram] bot.init failed:", err instanceof Error ? err.message : err);
   });
+
+  // fire-and-forget retry，避免阻塞 long-poll 启动
+  setCommandsWithRetry(bot).catch(() => {});
 
   await bot.start({ drop_pending_updates: true });
 }

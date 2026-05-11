@@ -1,4 +1,4 @@
-import { Bot, type BotCommand } from "grammy";
+import { Bot } from "grammy";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
@@ -10,7 +10,7 @@ export function getBot() {
 }
 
 /** 注册到 Telegram 输入框 `/` 菜单的命令列表。 */
-const BOT_COMMANDS: BotCommand[] = [
+const BOT_COMMANDS: Array<{ command: string; description: string }> = [
   { command: "start", description: "🔗 用 Web 端生成的绑定码绑定账号" },
   { command: "status", description: "🟢 检查 bot 是否在线" },
   { command: "tasks", description: "📋 查看我的下单任务" },
@@ -27,7 +27,7 @@ export async function startTelegramBot() {
   bot = new Bot(process.env.TELEGRAM_BOT_TOKEN);
   registerCommands(bot);
 
-  // 注册到 Telegram 客户端的命令菜单，错误不阻塞启动。
+  // 注册到 Telegram 客户端的命令菜单；失败不阻塞启动。
   bot.api.setMyCommands(BOT_COMMANDS).catch((err) => {
     console.warn("[telegram] setMyCommands failed:", err instanceof Error ? err.message : err);
   });
@@ -42,14 +42,10 @@ export async function stopTelegramBot() {
 
 // ============ 通知工具 ============
 
-/** Telegram HTML parse_mode 安全转义。
- *  https://core.telegram.org/bots/api#html-style */
+/** Telegram HTML parse_mode 安全转义。https://core.telegram.org/bots/api#html-style */
 export function escHtml(s: string | number | undefined | null): string {
   if (s === null || s === undefined) return "";
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 async function sendUserMessage(
@@ -72,7 +68,7 @@ async function sendUserMessage(
   }
 }
 
-/** 直接发到一个 Telegram chat id（绕过 user 表查找）。 */
+/** 直接发到一个 Telegram chat id（绕过 user 表查找，给申请审批之类无 user 的场景用）。 */
 export async function sendDirectMessage(
   telegramUserId: string,
   text: string,
@@ -85,7 +81,10 @@ export async function sendDirectMessage(
       link_preview_options: opts.disablePreview ? { is_disabled: true } : undefined,
     });
   } catch (err) {
-    console.warn(`[telegram] direct send to ${telegramUserId} failed:`, err instanceof Error ? err.message : err);
+    console.warn(
+      `[telegram] direct send to ${telegramUserId} failed:`,
+      err instanceof Error ? err.message : err,
+    );
   }
 }
 
@@ -111,7 +110,7 @@ export async function notifyOrderSuccess(
     `<b>订单</b>    <code>#${escHtml(orderId)}</code>`,
     `<b>发票</b>    <code>#${escHtml(invoiceId)}</code>`,
     "",
-    `💳 <a href="${escHtml(invoiceUrl)}">点击付款</a>  ·  发票 24 小时内未付将自动过期`,
+    `💳 <a href="${escHtml(invoiceUrl)}">点击付款</a>  ·  未付款发票将自动过期`,
   ];
   await sendUserMessage(userId, lines.join("\n"), { html: true, disablePreview: true });
 }
@@ -129,7 +128,7 @@ export async function notifyOrderFailed(userId: string, name: string, error: str
   await sendUserMessage(userId, lines.join("\n"), { html: true });
 }
 
-/** 任务被自动暂停 */
+/** 任务被自动暂停（连续失败上限触发） */
 export async function notifyTaskAutoPaused(
   userId: string,
   taskName: string,

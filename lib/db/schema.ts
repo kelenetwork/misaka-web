@@ -90,6 +90,15 @@ export const orders = sqliteTable("orders", {
   paidAt: integer("paid_at", { mode: "timestamp" }),
 });
 
+export const workerHealth = sqliteTable("worker_health", {
+  worker: text("worker").primaryKey(),
+  lastTickAt: integer("last_tick_at", { mode: "timestamp" }).notNull(),
+  lastSuccessAt: integer("last_success_at", { mode: "timestamp" }),
+  lastError: text("last_error"),
+  consecutiveFailures: integer("consecutive_failures").notNull().default(0),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
 export const bindCodes = sqliteTable("bind_codes", {
   code: text("code").primaryKey(),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),

@@ -4,6 +4,7 @@ import { systemConfig } from "@/lib/db/schema";
 import { inventoryEvents, pollInventoryPublic } from "@/lib/misaka/inventory";
 import { runMatchingTasks } from "./task-runner";
 import { cleanupExpiredRateLimits } from "@/lib/rate-limit";
+import { recordFailure, recordSuccess, recordTick } from "./health";
 
 let timer: NodeJS.Timeout | null = null;
 
@@ -23,10 +24,13 @@ export async function seedSystemConfig() {
 }
 
 export async function tickInventoryPoller() {
-  await cleanupExpiredRateLimits();
+  await recordTick("inventory_poller");
   try {
+    await cleanupExpiredRateLimits();
     await pollInventoryPublic();
+    await recordSuccess("inventory_poller");
   } catch (err) {
+    await recordFailure("inventory_poller", err);
     console.warn("[inventory-poller] tick failed:", err instanceof Error ? err.message : err);
   }
 }

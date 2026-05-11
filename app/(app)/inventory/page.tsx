@@ -127,7 +127,7 @@ export default async function InventoryPage() {
         }
       />
 
-      <section className="px-8 py-7 grid gap-6 flex-1">
+      <section className="px-4 sm:px-8 py-5 sm:py-7 grid gap-6 flex-1">
         <InventoryMatrix rows={rows} stats={stats} popularIds={[...POPULAR_REGION_IDS]} />
       </section>
 

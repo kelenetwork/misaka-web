@@ -122,7 +122,8 @@ function normalizeContinent(value: string | null) {
 function InventoryTable({ rows, emptyText }: { rows: InventoryRow[]; emptyText: string }) {
   return (
     <Card>
-      <div className="grid grid-cols-[200px_1fr_100px_90px_100px] bg-[var(--bg-elev-2)] text-[var(--text-faint)] text-[10px] tracking-[0.16em] uppercase">
+      {/* 桌面表头 */}
+      <div className="hidden lg:grid grid-cols-[200px_1fr_100px_90px_100px] bg-[var(--bg-elev-2)] text-[var(--text-faint)] text-[10px] tracking-[0.16em] uppercase">
         <div className="px-4 py-3">区域</div>
         <div className="px-4 py-3">机型库存</div>
         <div className="px-4 py-3">最低价</div>
@@ -131,7 +132,7 @@ function InventoryTable({ rows, emptyText }: { rows: InventoryRow[]; emptyText: 
       </div>
 
       {rows.length === 0 && (
-        <div className="px-8 py-12 text-center text-[var(--text-faint)] text-[13px]">
+        <div className="px-4 sm:px-8 py-10 sm:py-12 text-center text-[var(--text-faint)] text-[13px]">
           {emptyText}
         </div>
       )}
@@ -139,18 +140,26 @@ function InventoryTable({ rows, emptyText }: { rows: InventoryRow[]; emptyText: 
       {rows.map(({ region, plans, inStock, minPrice, updatedAt }) => (
         <div
           key={region.id}
-          className="grid grid-cols-[200px_1fr_100px_90px_100px] border-t border-[var(--border)] items-center hover:bg-[var(--bg-elev-2)] transition-colors"
+          className="flex flex-col gap-3 lg:gap-0 lg:grid lg:grid-cols-[200px_1fr_100px_90px_100px] border-t border-[var(--border)] lg:items-center hover:bg-[var(--bg-elev-2)] transition-colors px-4 py-3 lg:px-0 lg:py-0"
         >
-          <div className="px-4 py-3.5 flex items-center gap-3">
-            <span className="text-[22px] leading-none drop-shadow-md">{flagOf(region.countryCode)}</span>
-            <div className="leading-tight">
-              <div className="font-semibold text-[var(--text)]">{region.country}</div>
-              <div className="text-[10px] tracking-[0.08em] text-[var(--text-faint)]">
-                {region.id} · {region.facility ?? region.name}
+          <div className="px-0 lg:px-4 py-0 lg:py-3.5 flex items-center justify-between lg:justify-start gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-[22px] leading-none drop-shadow-md">{flagOf(region.countryCode)}</span>
+              <div className="leading-tight min-w-0">
+                <div className="font-semibold text-[var(--text)] truncate">{region.country}</div>
+                <div className="text-[10px] tracking-[0.08em] text-[var(--text-faint)] truncate">
+                  {region.id} · {region.facility ?? region.name}
+                </div>
               </div>
             </div>
+            {/* 移动端：摘要数字行内 */}
+            <div className="lg:hidden flex items-center gap-3 text-[11px] shrink-0">
+              <span className="text-[var(--misaka)] font-semibold">{inStock.length}</span>
+              <span className="text-[var(--text-faint)]">/{plans.length}</span>
+              <span className="text-[var(--text)] font-medium">${minPrice.toFixed(2)}</span>
+            </div>
           </div>
-          <div className="px-0 py-3.5 flex gap-1.5 flex-wrap">
+          <div className="px-0 lg:px-0 py-0 lg:py-3.5 flex gap-1.5 flex-wrap">
             {plans.map((plan) => (
               <span
                 key={plan.planId}
@@ -173,11 +182,12 @@ function InventoryTable({ rows, emptyText }: { rows: InventoryRow[]; emptyText: 
               </span>
             ))}
           </div>
-          <div className="px-4 py-3.5 text-[12px] text-[var(--text)] font-medium">
+          {/* 桌面端列：最低价 / 有货数 / 更新 */}
+          <div className="hidden lg:block px-4 py-3.5 text-[12px] text-[var(--text)] font-medium">
             <span className="text-[var(--text-faint)] text-[10px] mr-0.5">$</span>
             {minPrice.toFixed(2)}
           </div>
-          <div className="px-4 py-3.5 text-[12px]">
+          <div className="hidden lg:block px-4 py-3.5 text-[12px]">
             <span className="text-[var(--misaka)] font-semibold text-[13px]">{inStock.length}</span>
             <span className="text-[var(--text-faint)]">/{plans.length}</span>
           </div>
@@ -304,7 +314,7 @@ export function InventoryMatrix({
   return (
 
     <>
-      <div className="grid grid-cols-4 gap-4 fade-up">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 fade-up">
         <StatCard
           label="在监控区域"
           value={stats.regionsAvailable}
@@ -323,13 +333,13 @@ export function InventoryMatrix({
 
       <div className="fade-up" style={{ animationDelay: "80ms" }}>
         <Card className="px-4 py-4">
-        <div className="grid gap-3 xl:grid-cols-[minmax(220px,1fr)_auto] xl:items-center">
+        <div className="flex flex-col xl:grid xl:grid-cols-[minmax(220px,1fr)_auto] xl:items-center gap-3">
           <div className="flex flex-wrap items-center gap-3">
             <input
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
               placeholder="搜索国家 / 区域 ID / 城市 / 机房"
-              className="h-9 min-w-[280px] flex-1 rounded-md border border-[var(--border)] bg-[var(--bg-elev-2)] px-3 font-mono text-[12px] text-[var(--text)] outline-none transition-colors placeholder:text-[var(--text-faint)] focus:border-[var(--misaka)]"
+              className="h-9 w-full sm:min-w-[280px] sm:w-auto flex-1 rounded-md border border-[var(--border)] bg-[var(--bg-elev-2)] px-3 font-mono text-[12px] text-[var(--text)] outline-none transition-colors placeholder:text-[var(--text-faint)] focus:border-[var(--misaka)]"
             />
             <label className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--bg-elev-2)] px-3 text-[12px] text-[var(--text-dim)] transition-colors hover:border-[var(--border-strong)]">
               <input

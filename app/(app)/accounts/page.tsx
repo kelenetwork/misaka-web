@@ -27,13 +27,13 @@ export default async function AccountsPage() {
     <AppShell user={user}>
       <Topbar crumb="账户 /" title="misaka 账号" />
 
-      <section className="px-8 py-7 grid gap-6 flex-1">
+      <section className="px-4 sm:px-8 py-5 sm:py-7 grid gap-6 flex-1">
         <SectionHead
           title="账号管理"
           count={`${accounts.length} 个 · 密码 AES-256-GCM 加密存储`}
         />
 
-        <div className="grid grid-cols-[1fr_400px] gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-4 lg:gap-6">
           {/* 左：账号列表 */}
           <div className="grid gap-3">
             {accounts.length === 0 ? (

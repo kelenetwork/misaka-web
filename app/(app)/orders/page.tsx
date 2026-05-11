@@ -31,8 +31,8 @@ export default async function OrdersPage() {
     <AppShell user={user}>
       <Topbar crumb="自动化 /" title="订单历史" />
 
-      <section className="px-8 py-7 grid gap-6 flex-1">
-        <div className="grid grid-cols-4 gap-4">
+      <section className="px-4 sm:px-8 py-5 sm:py-7 grid gap-6 flex-1">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {[
             { label: "总单数", v: stats.total },
             { label: "已付款", v: stats.paid, tone: "ok" },
@@ -59,7 +59,7 @@ export default async function OrdersPage() {
             </Card>
           ) : (
             <Card>
-              <div className="grid grid-cols-[120px_1fr_140px_120px_110px_110px_60px] bg-[var(--bg-elev-2)] text-[var(--text-faint)] text-[10px] tracking-[0.16em] uppercase">
+              <div className="hidden lg:grid grid-cols-[120px_1fr_140px_120px_110px_110px_60px] bg-[var(--bg-elev-2)] text-[var(--text-faint)] text-[10px] tracking-[0.16em] uppercase">
                 <div className="px-4 py-3">时间</div>
                 <div className="px-4 py-3">区域 / 机型</div>
                 <div className="px-4 py-3">订单号</div>
@@ -68,31 +68,53 @@ export default async function OrdersPage() {
                 <div className="px-4 py-3">状态</div>
                 <div className="px-4 py-3 text-right">付款</div>
               </div>
-              {list.map((o) => (
-                <div key={o.id} className="grid grid-cols-[120px_1fr_140px_120px_110px_110px_60px] border-t border-[var(--border)] items-center hover:bg-[var(--bg-elev-2)] transition-colors">
-                  <div className="px-4 py-3.5 text-[11px] text-[var(--text-dim)] font-mono">
+              {list.map((o) => {
+                const statusBadge =
+                  o.status === "paid" ? <StatusBadge tone="primary">已付</StatusBadge>
+                  : o.status === "created" ? <StatusBadge tone="warn">待付</StatusBadge>
+                  : o.status === "pending" ? <StatusBadge tone="info">处理中</StatusBadge>
+                  : o.status === "failed" ? <StatusBadge tone="err">失败</StatusBadge>
+                  : null;
+                return (
+                <div key={o.id} className="flex flex-col gap-2 lg:gap-0 lg:grid lg:grid-cols-[120px_1fr_140px_120px_110px_110px_60px] border-t border-[var(--border)] lg:items-center hover:bg-[var(--bg-elev-2)] transition-colors p-3 lg:p-0">
+                  {/* 移动端头：region/plan + 状态徽 */}
+                  <div className="flex items-start justify-between gap-2 lg:hidden">
+                    <div className="min-w-0">
+                      <div className="text-[13px] font-medium truncate">{o.regionName} · {o.planSlug}</div>
+                      <div className="text-[10px] text-[var(--text-faint)] mt-0.5 font-mono">{o.region}/#{o.planId} · {fmtRelative(o.createdAt)}</div>
+                    </div>
+                    {statusBadge && <div className="shrink-0">{statusBadge}</div>}
+                  </div>
+                  {/* 移动端：订单号/发票号/金额 一行 */}
+                  <div className="flex flex-wrap items-center gap-3 text-[11px] lg:hidden">
+                    <span className="font-mono text-[var(--text-dim)]">订单 {o.misakaOrderId ? `#${o.misakaOrderId}` : "—"}</span>
+                    <span className="font-mono text-[var(--text-dim)]">发票 {o.invoiceId ? `#${o.invoiceId}` : "—"}</span>
+                    <span className="font-medium text-[var(--text)] ml-auto">{fmtPrice(o.price)}</span>
+                    {o.stripeLink && (
+                      <a href={o.stripeLink} target="_blank" rel="noopener" className="inline-flex items-center justify-center w-7 h-7 border border-[var(--border)] rounded-md text-[var(--misaka)] hover:bg-[var(--misaka-dim)] transition-colors" aria-label="付款">
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                  </div>
+                  {/* 桌面端列 */}
+                  <div className="hidden lg:block px-4 py-3.5 text-[11px] text-[var(--text-dim)] font-mono">
                     {fmtRelative(o.createdAt)}
                   </div>
-                  <div className="px-4 py-3.5">
+                  <div className="hidden lg:block px-4 py-3.5">
                     <div className="text-[12.5px] font-medium">{o.regionName} · {o.planSlug}</div>
                     <div className="text-[10px] text-[var(--text-faint)] mt-0.5 font-mono">{o.region}/#{o.planId}</div>
                   </div>
-                  <div className="px-4 py-3.5 font-mono text-[12px] text-[var(--text-dim)]">
+                  <div className="hidden lg:block px-4 py-3.5 font-mono text-[12px] text-[var(--text-dim)]">
                     {o.misakaOrderId ? `#${o.misakaOrderId}` : "—"}
                   </div>
-                  <div className="px-4 py-3.5 font-mono text-[12px] text-[var(--text-dim)]">
+                  <div className="hidden lg:block px-4 py-3.5 font-mono text-[12px] text-[var(--text-dim)]">
                     {o.invoiceId ? `#${o.invoiceId}` : "—"}
                   </div>
-                  <div className="px-4 py-3.5 text-[12px] font-medium">
+                  <div className="hidden lg:block px-4 py-3.5 text-[12px] font-medium">
                     {fmtPrice(o.price)}
                   </div>
-                  <div className="px-4 py-3.5">
-                    {o.status === "paid" && <StatusBadge tone="primary">已付</StatusBadge>}
-                    {o.status === "created" && <StatusBadge tone="warn">待付</StatusBadge>}
-                    {o.status === "pending" && <StatusBadge tone="info">处理中</StatusBadge>}
-                    {o.status === "failed" && <StatusBadge tone="err">失败</StatusBadge>}
-                  </div>
-                  <div className="px-4 py-3.5 text-right">
+                  <div className="hidden lg:block px-4 py-3.5">{statusBadge}</div>
+                  <div className="hidden lg:block px-4 py-3.5 text-right">
                     {o.stripeLink ? (
                       <a href={o.stripeLink} target="_blank" rel="noopener" className="inline-flex items-center justify-center w-7 h-7 border border-[var(--border)] rounded-md text-[var(--misaka)] hover:bg-[var(--misaka-dim)] transition-colors">
                         <ExternalLink className="w-3.5 h-3.5" />
@@ -100,7 +122,8 @@ export default async function OrdersPage() {
                     ) : <span className="text-[var(--text-faint)] text-[11px]">—</span>}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </Card>
           )}
         </div>

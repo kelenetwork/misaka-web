@@ -21,7 +21,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   return {
     id: row.id,
-    username: row.username,
+    username: row.username ?? row.name ?? row.email.split("@")[0],
     email: row.email,
     role: row.role,
   };

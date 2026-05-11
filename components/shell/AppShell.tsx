@@ -1,16 +1,23 @@
 import { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 
+type ShellUser = { username: string; role: "user" | "admin" } | { name: string; role: "user" | "admin" };
+
+function displayName(u: ShellUser): string {
+  if ("username" in u) return u.username;
+  return u.name;
+}
+
 export function AppShell({
   user,
   children,
 }: {
-  user: { name: string; role: "user" | "admin" };
+  user: ShellUser;
   children: ReactNode;
 }) {
   return (
     <div className="grid grid-cols-[240px_1fr] min-h-screen">
-      <Sidebar user={user} />
+      <Sidebar user={{ name: displayName(user), role: user.role }} />
       <main className="flex flex-col min-w-0">{children}</main>
     </div>
   );

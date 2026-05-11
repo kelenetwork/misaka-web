@@ -1,12 +1,14 @@
 import { AppShell, Footer } from "@/components/shell/AppShell";
 import { Topbar, StatusPill } from "@/components/shell/Topbar";
 import { db } from "@/lib/db/client";
-import { regions, inventorySnapshots } from "@/lib/db/schema";
+import { inventorySnapshots, orders, regions, tasks } from "@/lib/db/schema";
+import { and, count, eq, gte, lt } from "drizzle-orm";
 import { fmtRelative } from "@/lib/util/format";
-import { RefreshCw, Bell } from "lucide-react";
+import { Bell } from "lucide-react";
 import { getCurrentUser } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { InventoryMatrix, type InventoryRow, type InventoryStats } from "./_components/InventoryMatrix";
+import { RefreshButton } from "./_components/RefreshButton";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +27,23 @@ const POPULAR_REGION_IDS = new Set<string>([
   "LON05",
 ]);
 
-async function getInventoryData() {
+async function getInventoryData(userId: string) {
   const allRegions = await db.select().from(regions).orderBy(regions.continent, regions.name);
   const allPlans = await db.select().from(inventorySnapshots);
+  const tzOffsetMs = 8 * 3600 * 1000;
+  const todayStart = new Date(Math.floor((Date.now() + tzOffsetMs) / 86400000) * 86400000 - tzOffsetMs);
+  const [activeTaskRow] = await db
+    .select({ value: count() })
+    .from(tasks)
+    .where(and(eq(tasks.userId, userId), eq(tasks.enabled, true), lt(tasks.currentCount, tasks.targetCount)));
+  const [enabledTaskRow] = await db
+    .select({ value: count() })
+    .from(tasks)
+    .where(and(eq(tasks.userId, userId), eq(tasks.enabled, true)));
+  const [todayOrderRow] = await db
+    .select({ value: count() })
+    .from(orders)
+    .where(and(eq(orders.userId, userId), gte(orders.createdAt, todayStart)));
 
   const byRegion = new Map<string, typeof allPlans>();
   for (const plan of allPlans) {
@@ -36,7 +52,13 @@ async function getInventoryData() {
     byRegion.set(plan.region, list);
   }
 
-  return { allRegions, byRegion };
+  return {
+    allRegions,
+    byRegion,
+    activeTasks: activeTaskRow?.value ?? 0,
+    enabledTasks: enabledTaskRow?.value ?? 0,
+    todayOrders: todayOrderRow?.value ?? 0,
+  };
 }
 
 function serializeDate(date: Date | null | undefined) {
@@ -46,7 +68,7 @@ function serializeDate(date: Date | null | undefined) {
 export default async function InventoryPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const { allRegions, byRegion } = await getInventoryData();
+  const { allRegions, byRegion, activeTasks, enabledTasks, todayOrders } = await getInventoryData(user.id);
 
   const rows: InventoryRow[] = allRegions
     .map((region) => {
@@ -84,6 +106,9 @@ export default async function InventoryPage() {
     plansTotal: rows.reduce((acc, row) => acc + row.plans.length, 0),
     plansInStock: rows.reduce((acc, row) => acc + row.inStock.length, 0),
     lastUpdate,
+    activeTasks,
+    enabledTasks,
+    todayOrders,
   };
 
   return (
@@ -94,9 +119,7 @@ export default async function InventoryPage() {
         right={
           <>
             <StatusPill text={stats.lastUpdate ? `实时 · ${fmtRelative(stats.lastUpdate)}` : "等待首次轮询..."} />
-            <button className="w-8 h-8 grid place-items-center border border-[var(--border)] rounded-md text-[var(--text-dim)] hover:text-[var(--misaka)] hover:border-[var(--misaka)] transition-colors" title="刷新">
-              <RefreshCw className="w-4 h-4" />
-            </button>
+            <RefreshButton />
             <button className="w-8 h-8 grid place-items-center border border-[var(--border)] rounded-md text-[var(--text-dim)] hover:text-[var(--misaka)] hover:border-[var(--misaka)] transition-colors" title="通知">
               <Bell className="w-4 h-4" />
             </button>

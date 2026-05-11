@@ -8,6 +8,15 @@ const port = Number(process.env.PORT ?? 3000);
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
-await app.prepare();
-await initWorkers();
-createServer((req, res) => handle(req, res)).listen(port, hostname, () => console.log(`misaka-web ready on ${hostname}:${port}`));
+async function main() {
+  await app.prepare();
+  await initWorkers();
+  createServer((req, res) => handle(req, res)).listen(port, hostname, () =>
+    console.log(`misaka-web ready on ${hostname}:${port}`),
+  );
+}
+
+main().catch((err) => {
+  console.error("misaka-web fatal:", err);
+  process.exit(1);
+});

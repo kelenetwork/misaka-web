@@ -5,8 +5,11 @@ import { inventoryEvents, pollInventoryPublic } from "@/lib/misaka/inventory";
 import { runMatchingTasks } from "./task-runner";
 import { cleanupExpiredRateLimits } from "@/lib/rate-limit";
 import { recordFailure, recordSuccess, recordTick } from "./health";
+import { cleanupOldAuditLogs, DEFAULT_AUDIT_LOG_RETENTION_DAYS } from "@/lib/audit-cleanup";
 
 let timer: NodeJS.Timeout | null = null;
+let lastCleanupAt = 0;
+const CLEANUP_INTERVAL_MS = 24 * 3600 * 1000;
 
 // Wire task runner to inventory events
 inventoryEvents.on("available", runMatchingTasks);
@@ -32,6 +35,22 @@ export async function tickInventoryPoller() {
   } catch (err) {
     await recordFailure("inventory_poller", err);
     console.warn("[inventory-poller] tick failed:", err instanceof Error ? err.message : err);
+  } finally {
+    await maybeCleanupAuditLogs();
+  }
+}
+
+export async function maybeCleanupAuditLogs() {
+  const now = Date.now();
+  if (now - lastCleanupAt < CLEANUP_INTERVAL_MS) return;
+  lastCleanupAt = now;
+  try {
+    const result = await cleanupOldAuditLogs(DEFAULT_AUDIT_LOG_RETENTION_DAYS);
+    console.log(
+      `[cleanup] audit_logs retention: deleted ${result.deleted} rows older than ${result.cutoff.toISOString()}, kept ${result.kept}`,
+    );
+  } catch (err) {
+    console.warn("[cleanup] audit_logs cleanup failed:", err);
   }
 }
 

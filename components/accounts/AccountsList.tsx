@@ -16,14 +16,37 @@ type Account = {
 export function AccountsList({ accounts }: { accounts: Account[] }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
+  const [verifyResults, setVerifyResults] = useState<Record<string, { ok: boolean; message: string }>>({});
+
+  function setVerifyResult(id: string, result: { ok: boolean; message: string }, ttlMs: number) {
+    setVerifyResults((prev) => ({ ...prev, [id]: result }));
+    setTimeout(() => {
+      setVerifyResults((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }, ttlMs);
+  }
 
   async function verify(id: string) {
     setBusy(id);
-    const res = await fetch(`/api/accounts/${id}/verify`, { method: "POST" });
-    if (res.ok) alert("登录测试成功");
-    else { const data = await res.json().catch(() => ({})); alert(`登录失败: ${data?.error ?? res.status}`); }
-    setBusy(null);
-    router.refresh();
+    try {
+      const res = await fetch(`/api/accounts/${id}/verify`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const balance = Number(data?.balance?.balance ?? 0);
+        setVerifyResult(id, { ok: true, message: `✅ 账号有效 · 余额 $${balance.toFixed(2)}` }, 3000);
+        router.refresh();
+      } else {
+        setVerifyResult(id, { ok: false, message: `❌ ${data?.detail ?? data?.error ?? res.status}` }, 5000);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setVerifyResult(id, { ok: false, message: `❌ ${message}` }, 5000);
+    } finally {
+      setBusy(null);
+    }
   }
   async function remove(id: string, label: string) {
     if (!confirm(`确认删除账号 "${label}"？关联任务会失效。`)) return;
@@ -63,7 +86,18 @@ export function AccountsList({ accounts }: { accounts: Account[] }) {
             {a.status === "invalid" && <StatusBadge tone="err">凭据失效</StatusBadge>}
             {a.status === "rate_limited" && <StatusBadge tone="warn">熔断中</StatusBadge>}
           </div>
-          <div className="lg:px-4 lg:py-3.5 flex justify-end gap-1.5">
+          <div className="lg:px-4 lg:py-3.5 flex flex-wrap items-center justify-end gap-1.5">
+            {verifyResults[a.id] && (
+              <span
+                className={`max-w-full truncate rounded-full border px-2 py-1 text-[11px] ${
+                  verifyResults[a.id].ok
+                    ? "border-[var(--misaka)]/40 bg-[var(--misaka-dim)]/40 text-[var(--misaka)]"
+                    : "border-[var(--danger)]/40 bg-[var(--danger)]/10 text-[var(--danger)]"
+                }`}
+              >
+                {verifyResults[a.id].message}
+              </span>
+            )}
             <button
               onClick={() => verify(a.id)}
               disabled={busy === a.id}

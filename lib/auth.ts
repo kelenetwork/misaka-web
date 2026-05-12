@@ -18,4 +18,3 @@ export const auth = betterAuth({
 });
 
 export type Auth = typeof auth;
-// TODO: add optional activation email hook after SMTP provider is selected.
